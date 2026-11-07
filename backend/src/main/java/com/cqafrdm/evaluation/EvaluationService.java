@@ -79,10 +79,15 @@ public class EvaluationService {
 
     public int evaluateGroup(String groupId, Long checklistVersionId) {
         checklists.getEntity(checklistVersionId); // 404 сразу, а не в фоне
-        List<String> ids = conversations.findByGroupId(groupId).stream().map(Conversation::getId).toList();
-        if (ids.isEmpty()) {
+        List<String> all = conversations.findByGroupId(groupId).stream().map(Conversation::getId).toList();
+        if (all.isEmpty()) {
             throw new NotFoundException("В группе нет диалогов: " + groupId);
         }
+        // уже успешно оценённые этой версией чек-листа пропускаем (экономим бесплатный лимит модели)
+        List<String> ids = all.stream()
+                .filter(id -> !evaluations.existsByConversationIdAndChecklistVersionIdAndStatus(id, checklistVersionId, "OK"))
+                .toList();
+        log.info("batch {}: всего {}, к оценке {}, уже оценено {}", groupId, all.size(), ids.size(), all.size() - ids.size());
         ids.forEach(id -> pool.submit(() -> {
             try {
                 evaluate(id, checklistVersionId);

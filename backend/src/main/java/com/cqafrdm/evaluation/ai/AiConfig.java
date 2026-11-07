@@ -32,8 +32,8 @@ public class AiConfig {
         return new ScoringEngine();
     }
 
-    /** Провайдеры по порядку: основной и до двух резервных. У каждого MODEL может быть списком через запятую. */
-    static final String[] PROVIDERS = {"LLM_", "LLM_FALLBACK_", "LLM_FALLBACK2_"};
+    /** Провайдеры по порядку: основной и до четырёх резервных. У каждого MODEL может быть списком через запятую. */
+    static final String[] PROVIDERS = {"LLM_", "LLM_FALLBACK_", "LLM_FALLBACK2_", "LLM_FALLBACK3_", "LLM_FALLBACK4_"};
 
     @Bean
     public LlmClient llmClient(Environment env) {

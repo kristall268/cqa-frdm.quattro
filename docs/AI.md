@@ -157,6 +157,16 @@ LLM_FALLBACK2_MODEL=google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b
 #   LLM_FALLBACK2_BASE_URL=https://api.deepseek.com/v1
 #   LLM_FALLBACK2_MODEL=deepseek-chat
 
+# 4-5) Қосымша тегін резервтер (модель атауларын провайдер сайтынан тексер)
+# Cerebras (тегін tier, өте жылдам):   https://cloud.cerebras.ai -> API Keys
+# LLM_FALLBACK3_BASE_URL=https://api.cerebras.ai/v1
+# LLM_FALLBACK3_API_KEY=csk-...
+# LLM_FALLBACK3_MODEL=gpt-oss-120b
+# GitHub Models (GitHub аккаунтымен тегін; токен: Settings -> Developer settings -> PAT, рұқсат models:read):
+# LLM_FALLBACK4_BASE_URL=https://models.github.ai/inference
+# LLM_FALLBACK4_API_KEY=github_pat_...
+# LLM_FALLBACK4_MODEL=openai/gpt-4.1-mini
+
 # Тексеруші: БАСҚА модель (тәуелсіз пікір). Бос болса тексеру өшеді (токен 2 есе аз)
 LLM_VERIFIER_MODEL=qwen/qwen3.8-27b,openai/gpt-oss-20b
 
