@@ -30,6 +30,15 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     private final String apiKey;
     private final java.util.List<String> models;
     private volatile boolean jsonModeSupported = true;
+    /** Модели, ответившие 404 (нет такой) — больше не пробуем. */
+    private final java.util.Set<String> deadModels = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    /** Есть резервный провайдер — не ждём перегруженный сервис, сразу отдаём ошибку. */
+    private volatile boolean fastFail = false;
+
+    public OpenAiCompatibleLlmClient fastFail() {
+        this.fastFail = true;
+        return this;
+    }
 
     public OpenAiCompatibleLlmClient(ObjectMapper mapper, String baseUrl, String apiKey, String model) {
         this.mapper = mapper;
@@ -52,9 +61,10 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     public LlmResponse complete(LlmRequest request) throws LlmException {
         List<String> errors = new java.util.ArrayList<>();
         for (int i = 0; i < models.size(); i++) {
+            if (deadModels.contains(models.get(i))) { errors.add(models.get(i) + ": недоступна (404)"); continue; }
             boolean hasFallback = i < models.size() - 1;
             try {
-                return completeWith(models.get(i), request, hasFallback ? 2 : MAX_HTTP_ATTEMPTS);
+                return completeWith(models.get(i), request, fastFail ? 1 : hasFallback ? 2 : MAX_HTTP_ATTEMPTS);
             } catch (FallbackException e) {
                 errors.add(models.get(i) + ": " + shortError(e.getMessage()));
             }
@@ -85,7 +95,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                 throw new LlmException("Запрос к модели прерван", e);
             } catch (Exception e) {
                 lastError = "Сеть: " + e.getMessage();
-                sleep(backoffMs(attempt, null));
+                if (attempt < maxAttempts) sleep(backoffMs(attempt, null));
                 continue;
             }
             int code = resp.statusCode();
@@ -96,7 +106,10 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                 continue;
             }
             lastError = "HTTP " + code + ": " + shorten(resp.body());
-            if (code == 404) throw new FallbackException(lastError);          // модель недоступна
+            if (code == 404) {                                               // модель недоступна
+                deadModels.add(model);
+                throw new FallbackException(lastError);
+            }
             if (code == 429 || code >= 500) {
                 if (attempt < maxAttempts) sleep(backoffMs(attempt, resp.headers().firstValue("Retry-After").orElse(null)));
                 continue;

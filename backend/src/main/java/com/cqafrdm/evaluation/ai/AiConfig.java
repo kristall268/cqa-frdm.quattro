@@ -50,7 +50,8 @@ public class AiConfig {
                     blank(model) ? "gemini-3.8-flash" : model.trim());
         if (!blank(fbUrl) && !blank(fbKey) && !blank(fbModel))
             fallback = new OpenAiCompatibleLlmClient(MAPPER, fbUrl.trim(), fbKey.trim(), fbModel.trim());
-        if (primary != null && fallback != null) return new CompositeLlmClient(primary, fallback);
+        if (primary != null && fallback != null)
+            return new CompositeLlmClient(((OpenAiCompatibleLlmClient) primary).fastFail(), fallback);
         if (primary != null) return primary;
         if (fallback != null) return fallback;
         return new MockLlmClient(MAPPER);
