@@ -29,14 +29,15 @@ class LiveGeminiTest {
         String key = env.getOrDefault("LLM_API_KEY", "");
         assumeTrue(!key.isBlank(), "LLM_API_KEY пуст в backend/.env");
 
-        LlmClient llm = new OpenAiCompatibleLlmClient(MAPPER, env.get("LLM_BASE_URL"), key,
-                env.getOrDefault("LLM_MODEL", "gemini-3.8-flash"));
+        String fbUrl = env.get("LLM_FALLBACK_BASE_URL"), fbKey = env.get("LLM_FALLBACK_API_KEY"), fbModel = env.get("LLM_FALLBACK_MODEL");
+        LlmClient llm = AiConfig.buildClient(env.get("LLM_BASE_URL"), key, env.get("LLM_MODEL"), fbUrl, fbKey, fbModel);
+        String vModel = env.getOrDefault("LLM_VERIFIER_MODEL", "");
         ScoringEngine engine = new ScoringEngine();
         EvaluationRunner runner = new EvaluationRunner(llm, new PromptBuilder(), new LlmResponseValidator(MAPPER, engine),
                 engine, AiConfig.num(env.get("LLM_PRICE_IN_PER_1M")), AiConfig.num(env.get("LLM_PRICE_OUT_PER_1M")), 1,
-                env.getOrDefault("LLM_VERIFIER_MODEL", "").isBlank() ? null
-                        : new AnswerVerifier(new OpenAiCompatibleLlmClient(MAPPER, env.get("LLM_BASE_URL"), key,
-                                env.get("LLM_VERIFIER_MODEL")), new PromptBuilder(), MAPPER));
+                vModel.isBlank() ? null : new AnswerVerifier(
+                        AiConfig.buildClient(env.get("LLM_BASE_URL"), key, vModel, fbUrl, fbKey, fbModel),
+                        new PromptBuilder(), MAPPER));
 
         run(runner, "RU-sample", "RU", chat());
         run(runner, "KZ-sample", "KZ", List.of(

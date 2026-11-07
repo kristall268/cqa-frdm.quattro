@@ -147,6 +147,11 @@ LLM_PRICE_OUT_PER_1M=0
 LLM_MAX_PARALLEL=2
 LLM_VERIFIER_MODEL=gemini-3.8-flash          # тексеруші; бос болса тексеру өшеді
 # LLM_VERIFIER_BASE_URL= / LLM_VERIFIER_API_KEY=   # басқа провайдер болса ғана
+
+# Резерв провайдер: Gemini жауап бермесе (503/429), сұрау осыған кетеді
+LLM_FALLBACK_BASE_URL=https://api.groq.com/openai/v1
+LLM_FALLBACK_API_KEY=                          # console.groq.com -> API Keys (тегін)
+LLM_FALLBACK_MODEL=openai/gpt-oss-120b
 ```
 Ең мықты нұсқа: `LLM_MODEL=<Gemini Pro>,gemini-3.8-flash`, ал тексеруші ретінде басқа модель. Pro тегін tier-де жабық болса (404 немесе 429), клиент Flash-қа өзі ауысады.
 Модельді ауыстыру үшін тек осы 3 жолды өзгертесің (OpenAI: `https://api.openai.com/v1`, Groq: `https://api.groq.com/openai/v1`).

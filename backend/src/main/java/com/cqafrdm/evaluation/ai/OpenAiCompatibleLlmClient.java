@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * Клиент для любого OpenAI-совместимого Chat Completions API:
@@ -46,16 +47,16 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 
     @Override
     public LlmResponse complete(LlmRequest request) throws LlmException {
-        LlmException last = null;
+        List<String> errors = new java.util.ArrayList<>();
         for (int i = 0; i < models.size(); i++) {
             boolean hasFallback = i < models.size() - 1;
             try {
                 return completeWith(models.get(i), request, hasFallback ? 2 : MAX_HTTP_ATTEMPTS);
             } catch (FallbackException e) {
-                last = new LlmException(models.get(i) + ": " + e.getMessage());
+                errors.add(models.get(i) + ": " + shortError(e.getMessage()));
             }
         }
-        throw last;
+        throw new LlmException(String.join(" | ", errors));
     }
 
     /** Ошибки, при которых имеет смысл попробовать следующую модель. */
@@ -139,6 +140,14 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
 
     private static void sleep(long ms) {
         try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+    }
+
+    /** Из JSON-ошибки провайдера берём только "HTTP 503: <message>". */
+    private static String shortError(String s) {
+        if (s == null) return "";
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"message\"\\s*:\\s*\"([^\"]{0,200})").matcher(s);
+        String code = s.startsWith("HTTP ") ? s.substring(0, Math.min(s.length(), 8)) : "";
+        return m.find() ? (code + " " + m.group(1)).trim() : shorten(s);
     }
 
     private static String shorten(String s) {
