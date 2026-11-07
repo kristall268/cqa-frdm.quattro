@@ -47,6 +47,13 @@ public class PromptBuilder {
                a clear answer to one of two important questions can get a high dialog-management score and a partial consultation score.
                The 3-minute first-response threshold, tags and attachments are NOT evaluated.
             10. Be consistent and calibrated: give the top value only when fully deserved.
+            11. VOICE CALLS (channel=voice call) are speech-recognition transcripts: tolerate recognition errors, missing punctuation,
+                filler words, repetitions and pauses; judge the meaning of what was said, not spelling. Do not lower the
+                dialog-management score for ASR artefacts. If a phrase is unintelligible, do not guess its content.
+            12. INSUFFICIENT INFORMATION: if the transcript does not contain enough facts for a confident verdict
+                (e.g. the conversation is cut off, a key reply is missing), do not invent what happened. Use N/A only when
+                the criterion's N/A condition is met; otherwise choose the verdict supported by the visible messages and
+                say explicitly in reason which information is missing.
 
             OUTPUT
             Return ONLY a JSON object, no markdown, no comments, exactly in this shape, with one item for EVERY checklist criterion:

@@ -77,6 +77,7 @@ public class AiConfig {
                 if (!blank(keyOverride)) key = keyOverride;
                 if (!blank(modelOverride)) model = modelOverride;
             }
+            if (blank(key) && isLocal(url)) key = "local";   // Ollama / LM Studio на localhost ключа не требуют
             if (blank(url) || blank(key) || blank(model)) continue;
             list.add(new OpenAiCompatibleLlmClient(MAPPER, url.trim(), key.trim(), model.trim()));
         }
@@ -102,6 +103,13 @@ public class AiConfig {
     }
 
     static boolean blank(String s) { return s == null || s.isBlank(); }
+
+    /** Локальная модель (Ollama, LM Studio, vLLM) — данные не покидают компьютер. */
+    static boolean isLocal(String url) {
+        if (blank(url)) return false;
+        String u = url.toLowerCase();
+        return u.contains("://localhost") || u.contains("://127.0.0.1") || u.contains("://host.docker.internal");
+    }
 
     private static String or(String a, String b) { return blank(a) ? b : a; }
 
