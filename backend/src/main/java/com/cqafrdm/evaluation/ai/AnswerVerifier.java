@@ -112,10 +112,10 @@ public class AnswerVerifier {
             if (d == null) {
                 out.add(c.withVerification(null, "Вторая модель не дала вердикт"));
             } else if (d.agree() || sameAsCurrent(c, d)) {
-                out.add(c.withVerification(false, "✓ Подтверждено второй моделью" + suffix(d.comment())));
+                out.add(c.withConsensus(false, "✓ Подтверждено второй моделью" + suffix(d.comment()), 100));
             } else {
                 String proposal = d.suggestedIsNa() ? "N/A" : String.valueOf(d.suggestedAnswer());
-                out.add(c.withVerification(true, "⚠ Вторая модель не согласна, предлагает «" + proposal + "»" + suffix(d.comment())));
+                out.add(c.withConsensus(true, "⚠ Вторая модель не согласна, предлагает «" + proposal + "»" + suffix(d.comment()), 50));
             }
         }
         return new EvaluationResult(out, e.totalScore(), e.grossError());

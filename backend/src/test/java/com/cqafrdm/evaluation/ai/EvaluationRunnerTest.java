@@ -167,7 +167,7 @@ class EvaluationRunnerTest {
         assertTrue(o.result().criteria().stream().allMatch(c -> Boolean.FALSE.equals(c.needsReview())));
         assertEquals(2, o.llmCalls());
         assertEquals(6000, o.inputTokens());
-        assertTrue(o.model().contains("проверка"));
+        assertTrue(o.model().contains("fake-model"));
     }
 
     @Test

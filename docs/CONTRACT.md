@@ -180,3 +180,15 @@ Rule texts and scale labels: copy from CQA_Chat_Quality_Checklist.pdf (zone 2 ow
 - `#/checklists` editor: list versions, edit criteria (title, rule, type, weight, scale, naAllowed, naCondition), add/remove, "Save as new version" (zone 3).
 - `#/appeals` reviewer: open appeals, shows disputed criterion, comment, evidence snippet, CONFIRM / CHANGE + reason; card shows original vs final (zone 3).
 - Shared: `window.CQA = { api, ui, appeals, checklist }`; `api.js` exports `CQA.api.get/post/patch` returning JSON or throwing `{error,message}`.
+
+## 10. Additions (results submission, list summary)
+| Method | Path | Query | Returns |
+|---|---|---|---|
+| GET | `/api/results/export` | `groupId` (req), `checklistVersionId`, `source=final|original` | results file, schema 1.0 (see Student Guide appendix) |
+
+- Codes: c1..c8 → contact, discovery, identification, consultation, empathy, dialogue, closure, critical.
+- `value`: true/false/null(N/A)/scale number; `evidence_turns` = evidence index + 1 (1-based, original transcript order);
+  `final_score` recomputed over the 8 codes with N/A weight redistribution; `critical_flag` = critical value.
+- Not evaluated / FAILED → `status:"error"`, `criteria:[]`, `score:null`, `error`. One record per conversation of the group.
+- `GET /api/conversations` → `lastEvaluation` now also has `needsReviewCount` and `grossReason`; scores are from `final` (after appeals).
+- `preview` = first client message.

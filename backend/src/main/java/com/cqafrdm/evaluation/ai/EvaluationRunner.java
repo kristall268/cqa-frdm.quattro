@@ -50,15 +50,34 @@ public class EvaluationRunner {
 
     public String modelName() { return llm.modelName(); }
 
+    private ConsensusArbiter arbiter;      // null — арбитр выключен (CQA Guard: 3-я модель по спорным критериям)
+    private LlmClient localLlm;            // null — гибрид выключен; иначе звонки оцениваются локально
+    private boolean maskPii = true;        // маскировать ПДн перед отправкой в облако
+
+    public EvaluationRunner withArbiter(ConsensusArbiter a) { this.arbiter = a; return this; }
+    public EvaluationRunner withLocalForCalls(LlmClient local) { this.localLlm = local; return this; }
+    public EvaluationRunner withPiiMasking(boolean on) { this.maskPii = on; return this; }
+
+    public boolean hybrid() { return localLlm != null; }
+
+    static boolean isCall(String channel) {
+        String c = channel == null ? "" : channel.toLowerCase();
+        return c.contains("voice") || c.contains("call") || c.contains("звон");
+    }
+
     public EvaluationOutcome evaluate(String conversationId, String channel, String language,
                                       List<TranscriptMessage> transcript, List<Criterion> criteria) {
         int in = 0, out = 0, calls = 0;
-        String model = llm.modelName(), raw = null;
+        boolean local = localLlm != null && isCall(channel);
+        LlmClient client = local ? localLlm : llm;
+        String model = client.modelName(), raw = null;
         if (transcript == null || transcript.isEmpty())
             return failed("Пустой транскрипт", model, 0, 0, 0, null);
         List<String> checklistErrors = engine.validateChecklist(criteria);
         if (!checklistErrors.isEmpty())
             return failed("Некорректный чек-лист: " + String.join("; ", checklistErrors), model, 0, 0, 0, null);
+        // в облако — без персональных данных; локальной модели — как есть. Индексы реплик не меняются.
+        List<TranscriptMessage> forModel = !local && maskPii ? PiiMasker.mask(transcript) : transcript;
 
         try {
             parallel.acquire();
@@ -67,10 +86,10 @@ public class EvaluationRunner {
             return failed("Прервано", model, 0, 0, 0, null);
         }
         try {
-            List<LlmMessage> messages = new ArrayList<>(prompts.build(conversationId, channel, language, transcript, criteria));
+            List<LlmMessage> messages = new ArrayList<>(prompts.build(conversationId, channel, language, forModel, criteria));
             List<String> errors = List.of();
             for (int attempt = 1; attempt <= 2; attempt++) {
-                LlmResponse r = llm.complete(new LlmRequest(List.copyOf(messages), criteria, transcript));
+                LlmResponse r = client.complete(new LlmRequest(List.copyOf(messages), criteria, forModel));
                 calls++;
                 in += r.inputTokens();
                 out += r.outputTokens();
@@ -79,16 +98,29 @@ public class EvaluationRunner {
                 LlmResponseValidator.Result v = validator.validate(r.content(), criteria, transcript);
                 if (v.ok()) {
                     EvaluationResult result = engine.compute(criteria, v.results());
-                    if (verifier != null) {
-                        AnswerVerifier.Result check = verifier.verify(conversationId, channel, language, transcript, criteria, result);
+                    java.util.LinkedHashSet<String> models = new java.util.LinkedHashSet<>(List.of(model));
+                    if (local) {
+                        result = markLocal(result);
+                    } else if (verifier != null) {
+                        AnswerVerifier.Result check = verifier.verify(conversationId, channel, language, forModel, criteria, result);
                         result = AnswerVerifier.apply(result, check);
                         calls++;
                         in += check.inputTokens();
                         out += check.outputTokens();
-                        model = model + " + проверка " + (check.model() == null ? verifier.modelName() : check.model());
+                        if (check.model() != null) models.add(check.model());
+                        if (arbiter != null && check.ok()
+                                && result.criteria().stream().anyMatch(c -> Boolean.TRUE.equals(c.needsReview()))) {
+                            ConsensusArbiter.Outcome a = arbiter.resolve(conversationId, channel, language, forModel,
+                                    transcript, criteria, result, check);
+                            calls++;
+                            in += a.inputTokens();
+                            out += a.outputTokens();
+                            if (a.model() != null) models.add(a.model());
+                            result = engine.compute(criteria, a.rows());
+                        }
                     }
-                    return new EvaluationOutcome(EvaluationOutcome.Status.OK, result, null, model, in, out,
-                            cost(in, out), calls, raw);
+                    return new EvaluationOutcome(EvaluationOutcome.Status.OK, result, null, String.join(", ", models),
+                            in, out, local ? 0 : cost(in, out), calls, raw);
                 }
                 errors = v.errors();
                 messages.add(new LlmMessage("assistant", r.content()));
@@ -102,6 +134,12 @@ public class EvaluationRunner {
         } finally {
             parallel.release();
         }
+    }
+
+    private static EvaluationResult markLocal(EvaluationResult r) {
+        List<com.cqafrdm.evaluation.CriterionResult> out = new ArrayList<>();
+        r.criteria().forEach(c -> out.add(c.withConsensus(null, "🔒 Локальная модель: запись звонка не покидала компьютер", null)));
+        return new EvaluationResult(out, r.totalScore(), r.grossError());
     }
 
     /** Стоимость всех вызовов в USD (по ценам из .env). */
