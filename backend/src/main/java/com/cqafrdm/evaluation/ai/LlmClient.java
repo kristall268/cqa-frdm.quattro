@@ -4,6 +4,6 @@ package com.cqafrdm.evaluation.ai;
 public interface LlmClient {
     LlmResponse complete(LlmRequest request) throws LlmException;
 
-    /** Имя модели для отображения в UI ("gemini-2.5-flash", "mock"). */
+    /** Имя модели для отображения в UI ("gemini-3.8-flash", "mock"). */
     String modelName();
 }

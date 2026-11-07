@@ -140,7 +140,7 @@ public AppealDto decide(Long id, AppealDecisionRequest req) {   // {decision, ne
 ```
 LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 LLM_API_KEY=            # aistudio.google.com -> Get API key
-LLM_MODEL=gemini-2.5-flash   # AI Studio-дағы соңғы Flash атауын қой
+LLM_MODEL=gemini-3.8-flash   # AI Studio-дағы соңғы Flash атауын қой
 LLM_PRICE_IN_PER_1M=0
 LLM_PRICE_OUT_PER_1M=0
 LLM_MAX_PARALLEL=2

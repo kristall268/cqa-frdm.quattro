@@ -36,7 +36,7 @@ public class AiConfig {
             log.warn("LLM_API_KEY/LLM_BASE_URL не заданы — используется MockLlmClient (тестовые оценки)");
             return new MockLlmClient(MAPPER);
         }
-        String m = model == null || model.isBlank() ? "gemini-2.5-flash" : model.trim();
+        String m = model == null || model.isBlank() ? "gemini-3.8-flash" : model.trim();
         log.info("LLM: {} via {}", m, baseUrl);
         return new OpenAiCompatibleLlmClient(MAPPER, baseUrl.trim(), apiKey.trim(), m);
     }
