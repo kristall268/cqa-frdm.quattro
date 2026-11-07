@@ -35,6 +35,9 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         this.mapper = mapper;
         String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.endpoint = base.endsWith("/chat/completions") ? base : base + "/chat/completions";
+        if (apiKey == null || apiKey.isBlank() || !apiKey.matches("[\\x21-\\x7E]+"))
+            throw new IllegalArgumentException("API-ключ для " + base + " выглядит неверно (пустой, с пробелами "
+                    + "или не латиницей — возможно, в .env остался шаблон вместо настоящего ключа)");
         this.apiKey = apiKey;
         this.models = java.util.Arrays.stream(model.split(","))
                 .map(String::trim).filter(m -> !m.isEmpty()).toList();
