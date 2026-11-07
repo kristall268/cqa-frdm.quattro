@@ -1,0 +1,21 @@
+# секреты
+.env
+*.env.local
+
+# Java / Maven
+target/
+*.class
+*.log
+!**/src/main/**/target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# frontend
+node_modules/
