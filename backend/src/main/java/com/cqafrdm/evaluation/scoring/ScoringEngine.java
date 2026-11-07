@@ -1,8 +1,8 @@
 package com.cqafrdm.evaluation.scoring;
 
-import com.cqafrdm.evaluation.model.Criterion;
+import com.cqafrdm.checklist.Criterion;
 import com.cqafrdm.evaluation.model.CriterionResult;
-import com.cqafrdm.evaluation.model.CriterionType;
+import com.cqafrdm.checklist.CriterionType;
 import com.cqafrdm.evaluation.model.EvaluationResult;
 
 import java.math.BigDecimal;
@@ -51,7 +51,7 @@ public class ScoringEngine {
                 } catch (NumberFormatException e) {
                     throw new IllegalArgumentException(c.id() + ": ожидается число шкалы, получено " + answer);
                 }
-                if (!c.hasScaleValue(v))
+                if (!hasScaleValue(c, v))
                     throw new IllegalArgumentException(c.id() + ": значение " + v + " не входит в шкалу "
                             + c.scale().stream().map(s -> String.valueOf(s.value())).toList());
             }
@@ -62,10 +62,10 @@ public class ScoringEngine {
     public Double points(Criterion c, String answer, boolean isNa) {
         validateAnswer(c, answer, isNa);
         if (isNa || c.type() == CriterionType.FLAG) return null;
-        if (c.type() == CriterionType.BINARY) return YES.equals(answer) ? c.weight() : 0.0;
-        int max = c.maxScale();
+        if (c.type() == CriterionType.BINARY) return YES.equals(answer) ? w(c) : 0.0;
+        int max = maxScale(c);
         if (max <= 0) return 0.0;
-        return c.weight() * Integer.parseInt(answer.trim()) / max;
+        return w(c) * Integer.parseInt(answer.trim()) / max;
     }
 
     /**
@@ -81,14 +81,14 @@ public class ScoringEngine {
             CriterionResult r = byId.get(c.id());
             if (r == null) throw new IllegalArgumentException(c.id() + ": нет результата для критерия");
             Double p = points(c, r.answer(), r.isNa());
-            scored.add(new CriterionResult(c.id(), c.title(), c.type(), c.weight(),
+            scored.add(new CriterionResult(c.id(), c.title(), c.type(), w(c),
                     r.isNa() ? null : r.answer(), r.isNa(), p == null ? null : round2(p),
                     r.reason(), r.evidenceIds() == null ? List.of() : r.evidenceIds(), r.checkedRange()));
             if (c.type() == CriterionType.FLAG) {
                 gross |= !r.isNa() && YES.equals(r.answer());
             } else if (!r.isNa()) {
                 sumPoints += p;
-                sumWeights += c.weight();
+                sumWeights += w(c);
             }
         }
         Double total = sumWeights > 0 ? round2(100.0 * sumPoints / sumWeights) : null;
@@ -136,16 +136,16 @@ public class ScoringEngine {
             }
             switch (c.type()) {
                 case FLAG -> {
-                    if (c.weight() != 0) errors.add(id + ": у FLAG вес должен быть 0");
+                    if (w(c) != 0) errors.add(id + ": у FLAG вес должен быть 0");
                 }
                 case BINARY -> {
-                    if (c.weight() <= 0) errors.add(id + ": вес должен быть > 0");
+                    if (w(c) <= 0) errors.add(id + ": вес должен быть > 0");
                 }
                 case SCALE -> {
-                    if (c.weight() <= 0) errors.add(id + ": вес должен быть > 0");
+                    if (w(c) <= 0) errors.add(id + ": вес должен быть > 0");
                     if (c.scale() == null || c.scale().size() < 2) errors.add(id + ": у шкалы минимум 2 ступени");
                     else {
-                        if (c.maxScale() <= 0) errors.add(id + ": максимум шкалы должен быть > 0");
+                        if (maxScale(c) <= 0) errors.add(id + ": максимум шкалы должен быть > 0");
                         if (c.scale().stream().map(s -> s.value()).distinct().count() != c.scale().size())
                             errors.add(id + ": ступени шкалы повторяются");
                         if (c.scale().stream().anyMatch(s -> s.value() < 0))
@@ -157,6 +157,19 @@ public class ScoringEngine {
         if (criteria.stream().filter(c -> c.type() != null && c.type() != CriterionType.FLAG).findAny().isEmpty())
             errors.add("Нет ни одного критерия с весом");
         return errors;
+    }
+
+    /** Вес критерия как double (в чек-листе хранится BigDecimal). */
+    public static double w(Criterion c) {
+        return c.weight() == null ? 0 : c.weight().doubleValue();
+    }
+
+    public static int maxScale(Criterion c) {
+        return c.scale() == null ? 0 : c.scale().stream().mapToInt(s -> s.value()).max().orElse(0);
+    }
+
+    public static boolean hasScaleValue(Criterion c, int v) {
+        return c.scale() != null && c.scale().stream().anyMatch(s -> s.value() == v);
     }
 
     static double round2(double v) {

@@ -1,10 +1,11 @@
 package com.cqafrdm.evaluation.ai;
 
-import com.cqafrdm.evaluation.model.Criterion;
+import com.cqafrdm.checklist.Criterion;
 import com.cqafrdm.conversation.TranscriptMessage;
 import com.cqafrdm.evaluation.scoring.ScoringEngine;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -126,7 +127,7 @@ class EvaluationRunnerTest {
     void newCriterionFromSettingsIsUsedWithoutCodeChanges() {
         List<Criterion> changed = new java.util.ArrayList<>(checklist());
         changed.set(4, new Criterion("c5b", "Персонализация", "Ведение", "Да — оператор обратился к клиенту по имени.",
-                com.cqafrdm.evaluation.model.CriterionType.BINARY, 15, false, null, null));
+                com.cqafrdm.checklist.CriterionType.BINARY, BigDecimal.valueOf(15), false, null, null));
         String prompt = new PromptBuilder().userMessage("p1", "agent chat", "RU", chat(), changed);
         assertTrue(prompt.contains("c5b") && prompt.contains("Персонализация"));
         EvaluationOutcome o = runner(new MockLlmClient(MAPPER)).evaluate("p1", "agent chat", "RU", chat(), changed);

@@ -1,5 +1,6 @@
 package com.cqafrdm.evaluation.model;
 
+import com.cqafrdm.checklist.CriterionType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;

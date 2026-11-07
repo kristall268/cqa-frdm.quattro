@@ -1,6 +1,6 @@
 package com.cqafrdm.evaluation.ai;
 
-import com.cqafrdm.evaluation.model.Criterion;
+import com.cqafrdm.checklist.Criterion;
 import com.cqafrdm.evaluation.model.EvaluationResult;
 import com.cqafrdm.conversation.TranscriptMessage;
 import com.cqafrdm.evaluation.scoring.ScoringEngine;

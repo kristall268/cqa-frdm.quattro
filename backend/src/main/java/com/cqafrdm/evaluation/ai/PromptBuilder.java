@@ -1,8 +1,8 @@
 package com.cqafrdm.evaluation.ai;
 
-import com.cqafrdm.evaluation.model.Criterion;
-import com.cqafrdm.evaluation.model.CriterionType;
-import com.cqafrdm.evaluation.model.ScaleStep;
+import com.cqafrdm.checklist.Criterion;
+import com.cqafrdm.checklist.CriterionType;
+import com.cqafrdm.checklist.ScaleStep;
 import com.cqafrdm.conversation.TranscriptMessage;
 
 import java.util.ArrayList;

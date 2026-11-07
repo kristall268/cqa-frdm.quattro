@@ -1,9 +1,9 @@
 package com.cqafrdm.evaluation.ai;
 
 import com.cqafrdm.evaluation.model.CheckedRange;
-import com.cqafrdm.evaluation.model.Criterion;
+import com.cqafrdm.checklist.Criterion;
 import com.cqafrdm.evaluation.model.CriterionResult;
-import com.cqafrdm.evaluation.model.CriterionType;
+import com.cqafrdm.checklist.CriterionType;
 import com.cqafrdm.conversation.TranscriptMessage;
 import com.cqafrdm.evaluation.scoring.ScoringEngine;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -86,7 +86,7 @@ public class LlmResponseValidator {
             if (reason == null || reason.isBlank()) errors.add(id + ": пустое обоснование (reason)");
             if (answerOk && !isNa) checkEvidence(c, answer, evidence, range, transcript, errors);
 
-            parsed.put(id, new CriterionResult(id, c.title(), c.type(), c.weight(), answer, isNa, null,
+            parsed.put(id, new CriterionResult(id, c.title(), c.type(), ScoringEngine.w(c), answer, isNa, null,
                     reason, evidence, range));
         }
         for (String id : byId.keySet()) if (!parsed.containsKey(id)) errors.add(id + ": нет оценки по критерию");

@@ -1,5 +1,6 @@
 package com.cqafrdm.evaluation.model;
 
+import com.cqafrdm.checklist.Criterion;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

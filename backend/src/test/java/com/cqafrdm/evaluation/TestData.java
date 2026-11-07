@@ -1,9 +1,10 @@
 package com.cqafrdm.evaluation;
 
-import com.cqafrdm.evaluation.model.Criterion;
+import com.cqafrdm.checklist.Criterion;
 import com.cqafrdm.evaluation.model.CriterionResult;
 import com.cqafrdm.evaluation.model.DefaultChecklist;
 import com.cqafrdm.conversation.TranscriptMessage;
+import com.cqafrdm.evaluation.scoring.ScoringEngine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
@@ -40,7 +41,7 @@ public final class TestData {
         for (int i = 0; i < cl.size(); i++) {
             Criterion c = cl.get(i);
             boolean na = a[i] == null;
-            out.add(new CriterionResult(c.id(), c.title(), c.type(), c.weight(), a[i], na, null,
+            out.add(new CriterionResult(c.id(), c.title(), c.type(), ScoringEngine.w(c), a[i], na, null,
                     "test", List.of(3), null));
         }
         return out;

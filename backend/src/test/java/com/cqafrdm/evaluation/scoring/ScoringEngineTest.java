@@ -1,11 +1,12 @@
 package com.cqafrdm.evaluation.scoring;
 
-import com.cqafrdm.evaluation.model.Criterion;
-import com.cqafrdm.evaluation.model.CriterionType;
+import com.cqafrdm.checklist.Criterion;
+import com.cqafrdm.checklist.CriterionType;
 import com.cqafrdm.evaluation.model.EvaluationResult;
-import com.cqafrdm.evaluation.model.ScaleStep;
+import com.cqafrdm.checklist.ScaleStep;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,8 +60,8 @@ class ScoringEngineTest {
     @Test
     void noApplicableWeightedCriteriaGivesNullTotal() {
         List<Criterion> cl = List.of(
-                new Criterion("a", "A", "s", "r", CriterionType.BINARY, 10, true, "cond", null),
-                new Criterion("f", "F", "s", "r", CriterionType.FLAG, 0, false, null, null));
+                new Criterion("a", "A", "s", "r", CriterionType.BINARY, BigDecimal.valueOf(10), true, "cond", null),
+                new Criterion("f", "F", "s", "r", CriterionType.FLAG, BigDecimal.valueOf(0), false, null, null));
         var res = new ArrayList<com.cqafrdm.evaluation.model.CriterionResult>();
         res.add(new com.cqafrdm.evaluation.model.CriterionResult("a", "A", CriterionType.BINARY, 10, null, true, null, "na", List.of(), null));
         res.add(new com.cqafrdm.evaluation.model.CriterionResult("f", "F", CriterionType.FLAG, 0, "NO", false, null, "ok", List.of(), null));
@@ -71,13 +72,13 @@ class ScoringEngineTest {
     void roundsToTwoDecimalsHalfUp() {
         // 2 критерия весом 3 и 6: YES + NO = 3/9 = 33.333.. -> 33.33 ; scale 2 из 3 при весе 1 -> 0.67
         List<Criterion> cl = List.of(
-                new Criterion("a", "A", "s", "r", CriterionType.BINARY, 3, false, null, null),
-                new Criterion("b", "B", "s", "r", CriterionType.BINARY, 6, false, null, null));
+                new Criterion("a", "A", "s", "r", CriterionType.BINARY, BigDecimal.valueOf(3), false, null, null),
+                new Criterion("b", "B", "s", "r", CriterionType.BINARY, BigDecimal.valueOf(6), false, null, null));
         var res = List.of(
                 new com.cqafrdm.evaluation.model.CriterionResult("a", "A", CriterionType.BINARY, 3, "YES", false, null, "x", List.of(0), null),
                 new com.cqafrdm.evaluation.model.CriterionResult("b", "B", CriterionType.BINARY, 6, "NO", false, null, "x", List.of(0), null));
         assertEquals(33.33, engine.compute(cl, res).totalScore());
-        Criterion s = new Criterion("s", "S", "s", "r", CriterionType.SCALE, 1, false, null,
+        Criterion s = new Criterion("s", "S", "s", "r", CriterionType.SCALE, BigDecimal.valueOf(1), false, null,
                 List.of(new ScaleStep(0, "0"), new ScaleStep(2, "2"), new ScaleStep(3, "3")));
         assertEquals(0.67, ScoringEngine.round2(engine.points(s, "2", false)));
     }
@@ -120,8 +121,8 @@ class ScoringEngineTest {
     void checklistValidation() {
         assertTrue(engine.validateChecklist(checklist()).isEmpty());
         List<Criterion> bad = List.of(
-                new Criterion("x", "", "s", "r", CriterionType.SCALE, 10, false, null, List.of(new ScaleStep(5, "5"))),
-                new Criterion("x", "Y", "s", "r", CriterionType.FLAG, 5, false, null, null));
+                new Criterion("x", "", "s", "r", CriterionType.SCALE, BigDecimal.valueOf(10), false, null, List.of(new ScaleStep(5, "5"))),
+                new Criterion("x", "Y", "s", "r", CriterionType.FLAG, BigDecimal.valueOf(5), false, null, null));
         List<String> errors = engine.validateChecklist(bad);
         assertTrue(errors.size() >= 4, errors.toString());
     }

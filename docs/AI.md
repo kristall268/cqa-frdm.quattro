@@ -38,7 +38,7 @@
 
 | Файл | Не істейді |
 |---|---|
-| `evaluation/model/*` | Criterion, CriterionResult, EvaluationResult, TranscriptMessage (CONTRACT §4) |
+| `evaluation/model/*` | CriterionResult, EvaluationResult, CheckedRange (Criterion — `checklist.*`, TranscriptMessage — `conversation.*`) |
 | `evaluation/model/DefaultChecklist` + `resources/checklists/default-v1.json` | PDF-тегі 8 критерий |
 | `db/migration/V2__seed_default_checklist.sql` | Сол чек-листті БД-ға `default v1` етіп салады |
 | `evaluation/scoring/ScoringEngine` | Балл, N/A, итог, апелляция қайта есебі, чек-лист валидациясы |
@@ -56,7 +56,7 @@
 **Бағалау (`EvaluationService`):**
 ```java
 List<TranscriptMessage> t = mapper.convertValue(conv.getTranscript(), new TypeReference<>() {});
-List<Criterion> criteria = mapper.convertValue(version.getCriteria(), new TypeReference<>() {});
+List<Criterion> criteria = version.getCriteria();   // com.cqafrdm.checklist.Criterion — тот же класс, конвертация не нужна
 EvaluationOutcome o = evaluationRunner.evaluate(conv.getId(), conv.getChannel(), conv.getLanguage(), t, criteria);
 // evaluation: status=o.status(), result=o.result(), total_score=o.totalScore(), gross_error=o.grossError(),
 //             model=o.model(), input_tokens=o.inputTokens(), output_tokens=o.outputTokens(),
