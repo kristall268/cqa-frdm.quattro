@@ -11,7 +11,7 @@ services:
       POSTGRES_USER: ${DB_USER:-cqa}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-cqa}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"   # если 5432 занят локальным PostgreSQL: set DB_PORT=5433
     volumes:
       - cqa-pgdata:/var/lib/postgresql/data
     healthcheck:
