@@ -137,24 +137,34 @@ public AppealDto decide(Long id, AppealDecisionRequest req) {   // {decision, ne
 ### 3.4 Чек-лист валидациясы
 Сенің `ChecklistService.validate` әдісің жеткілікті. `scoringEngine.validateChecklist(...)` тек `EvaluationRunner` ішінде қосымша тексеру ретінде шақырылады.
 
-## 4. `.env` (Gemini)
+## 4. `.env` — тегін модельдер тізбегі (ұсынылатын)
 ```
-LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-LLM_API_KEY=            # aistudio.google.com -> Get API key
-LLM_MODEL=gemini-3.8-flash,gemini-3.5-flash-lite   # үтір арқылы резерв: 503/429/404 болса келесісі
+# 1) Негізгі: Groq (тегін, жылдам). Әр модельдің ӨЗ лимиті бар -> тізім = лимит × 3
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_API_KEY=gsk_...
+LLM_MODEL=openai/gpt-oss-120b,qwen/qwen3.8-27b,openai/gpt-oss-20b
+
+# 2) Резерв: Gemini (тегін, бірақ жиі 503)
+LLM_FALLBACK_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+LLM_FALLBACK_API_KEY=AIza...
+LLM_FALLBACK_MODEL=gemini-3.8-flash
+
+# 3) Екінші резерв: OpenRouter тегін модельдері  (немесе DeepSeek, төменде)
+LLM_FALLBACK2_BASE_URL=https://openrouter.ai/api/v1
+LLM_FALLBACK2_API_KEY=sk-or-...
+LLM_FALLBACK2_MODEL=google/gemma-4-31b-it:free,nvidia/nemotron-3-super-120b-a12b:free
+#   DeepSeek (ақылы, ~$0.001/бағалау):
+#   LLM_FALLBACK2_BASE_URL=https://api.deepseek.com/v1
+#   LLM_FALLBACK2_MODEL=deepseek-chat
+
+# Тексеруші: БАСҚА модель (тәуелсіз пікір). Бос болса тексеру өшеді (токен 2 есе аз)
+LLM_VERIFIER_MODEL=qwen/qwen3.8-27b,openai/gpt-oss-20b
+
 LLM_PRICE_IN_PER_1M=0
 LLM_PRICE_OUT_PER_1M=0
 LLM_MAX_PARALLEL=2
-LLM_VERIFIER_MODEL=gemini-3.8-flash          # тексеруші; бос болса тексеру өшеді
-# LLM_VERIFIER_BASE_URL= / LLM_VERIFIER_API_KEY=   # басқа провайдер болса ғана
-
-# Резерв провайдер: Gemini жауап бермесе (503/429), сұрау осыған кетеді
-LLM_FALLBACK_BASE_URL=https://api.groq.com/openai/v1
-LLM_FALLBACK_API_KEY=                          # console.groq.com -> API Keys (тегін)
-LLM_FALLBACK_MODEL=openai/gpt-oss-120b
 ```
-Ең мықты нұсқа: `LLM_MODEL=<Gemini Pro>,gemini-3.8-flash`, ал тексеруші ретінде басқа модель. Pro тегін tier-де жабық болса (404 немесе 429), клиент Flash-қа өзі ауысады.
-Модельді ауыстыру үшін тек осы 3 жолды өзгертесің (OpenAI: `https://api.openai.com/v1`, Groq: `https://api.groq.com/openai/v1`).
+Тізбек: модель лимитке жетсе (429), жүктемеде болса (503) немесе жоқ болса (404), келесі модельге, ал провайдердің бүкіл тізімі істемесе, келесі провайдерге өтеді. Соңғы провайдерден басқасы күтпейді (fast-fail).
 
 ## 5. Тесттер
 ```

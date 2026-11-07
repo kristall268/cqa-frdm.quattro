@@ -43,15 +43,10 @@ class DevBatchTest {
 
         Map<String, String> env = readEnv(Path.of(".env"));
         String key = env.getOrDefault("LLM_API_KEY", "");
-        String fbUrl = env.get("LLM_FALLBACK_BASE_URL"), fbKey = env.get("LLM_FALLBACK_API_KEY"), fbModel = env.get("LLM_FALLBACK_MODEL");
-        LlmClient llm = AiConfig.buildClient(env.get("LLM_BASE_URL"), key, env.get("LLM_MODEL"), fbUrl, fbKey, fbModel);
-        String vModel = env.getOrDefault("LLM_VERIFIER_MODEL", "");
+        LlmClient llm = AiConfig.chain(env::get, null, null, null);
         ScoringEngine engine = new ScoringEngine();
-        EvaluationRunner runner = new EvaluationRunner(llm, new PromptBuilder(), new LlmResponseValidator(MAPPER, engine),
-                engine, AiConfig.num(env.get("LLM_PRICE_IN_PER_1M")), AiConfig.num(env.get("LLM_PRICE_OUT_PER_1M")), 1,
-                vModel.isBlank() ? null : new AnswerVerifier(
-                        AiConfig.buildClient(env.get("LLM_BASE_URL"), key, vModel, fbUrl, fbKey, fbModel),
-                        new PromptBuilder(), MAPPER));
+        EvaluationRunner runner = AiConfig.runner(env::get, llm, engine);
+        System.out.println("LLM chain: " + AiConfig.describe(env::get) + " | verifier: " + env.getOrDefault("LLM_VERIFIER_MODEL", "-"));
 
         List<Criterion> criteria = checklist();
         List<JsonNode> records = loadRecords(data);
