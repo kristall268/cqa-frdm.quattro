@@ -56,6 +56,11 @@ public class PromptBuilder {
                 (completeness) problem, not a discovery problem.
             8c. Consultation scale: client asked two things and one significant question was ignored -> 10; only a minor
                 detail missing -> 15. Ignoring a direct client question is also one noticeable flaw for dialog management (7).
+            8d. WORKED EXAMPLE (follow it): client: "Where do I update my details, and when can I retry the withdrawal?"
+                operator: "Menu -> Orders -> Personal details -> Change of details." then says goodbye, the "when" question
+                is never answered. Correct: discovery = N/A (the request was already clear, nothing had to be clarified),
+                identification = N/A (navigation only), consultation = "10" (one of two significant questions unanswered),
+                dialog management = "7" (a direct question was ignored). Do NOT put discovery = NO for an unanswered question.
             9. Consultation (correct & complete answer) and dialog management (clarity, order, warning about waiting) are separate:
                a clear answer to one of two important questions can get a high dialog-management score and a partial consultation score.
                The 3-minute first-response threshold, tags and attachments are NOT evaluated.
