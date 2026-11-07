@@ -107,7 +107,11 @@ public class LlmResponseValidator {
         boolean positive = c.type() == CriterionType.BINARY
                 ? ScoringEngine.YES.equals(answer)
                 : answer != null && Integer.parseInt(answer) > 0;
-        if (positive) {
+        if (positive && c.type() == CriterionType.SCALE) {
+            // шкала оценивает диалог целиком: достаточно любой реальной реплики или проверенного участка
+            if (evidence.isEmpty() && range == null)
+                errors.add(c.id() + ": укажите evidence_ids или checked_range");
+        } else if (positive) {
             boolean hasOperator = evidence.stream()
                     .anyMatch(i -> "operator".equalsIgnoreCase(transcript.get(i).speaker()));
             if (!hasOperator) errors.add(c.id() + ": для положительной оценки нужна реплика оператора в evidence_ids");

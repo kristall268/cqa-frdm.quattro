@@ -137,4 +137,12 @@ class GuardTest {
         assertFalse(p.contains("2026-05-12T"));
         assertTrue(p.contains("[5] (00:05) OPERATOR: " + "x".repeat(320) + "…"));
     }
+
+    @Test
+    void scaleCriterionMayCiteClientMessage() {
+        String c6client = GOOD.replace("{\"criterion_id\":\"c6\",\"answer\":\"10\",\"is_na\":false,\"reason\":\"Ясно.\",\"evidence_ids\":[3,5]",
+                "{\"criterion_id\":\"c6\",\"answer\":\"10\",\"is_na\":false,\"reason\":\"Ясно.\",\"evidence_ids\":[4]");
+        assertNotEquals(GOOD, c6client);
+        assertTrue(new LlmResponseValidator(MAPPER, engine).validate(c6client, checklist(), chat()).ok());
+    }
 }
