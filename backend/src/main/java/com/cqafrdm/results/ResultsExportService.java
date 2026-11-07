@@ -35,13 +35,16 @@ public class ResultsExportService {
     private final String modelMode;
     private final String llmBaseUrl;
     private final String llmModel;
+    private final String localUrl;
 
     public ResultsExportService(ConversationRepository conversations, EvaluationRepository evaluations,
                                 AppealRepository appeals,
                                 @Value("${TEAM_NAME:quattro}") String teamName,
                                 @Value("${RESULTS_MODEL_MODE:}") String modelMode,
                                 @Value("${LLM_BASE_URL:}") String llmBaseUrl,
-                                @Value("${LLM_MODEL:}") String llmModel) {
+                                @Value("${LLM_MODEL:}") String llmModel,
+                                @Value("${LLM_LOCAL_BASE_URL:}") String localUrl) {
+        this.localUrl = localUrl;
         this.conversations = conversations;
         this.evaluations = evaluations;
         this.appeals = appeals;
@@ -70,7 +73,9 @@ public class ResultsExportService {
             Optional<Evaluation> ok = evs.stream().filter(e -> "OK".equals(e.getStatus()) && e.getResult() != null).findFirst();
             if (ok.isPresent()) {
                 Evaluation e = ok.get();
-                if (e.getModel() != null && !e.getModel().isBlank()) models.add(e.getModel());
+                if (e.getModel() != null && !e.getModel().isBlank())
+                    for (String m : e.getModel().replace(" + проверка ", ", ").split(","))
+                        if (!m.isBlank()) models.add(m.trim());
                 results.add(ResultsMapper.toEntry(c.getId(), useFinal ? finalResult(e) : e.getResult()));
             } else if (!evs.isEmpty()) {
                 results.add(ResultsMapper.error(c.getId(), evs.get(0).getError()));
@@ -103,7 +108,10 @@ public class ResultsExportService {
     String mode() {
         if (modelMode != null && !modelMode.isBlank()) return modelMode.trim();
         String u = llmBaseUrl == null ? "" : llmBaseUrl.toLowerCase(Locale.ROOT);
-        if (u.isBlank() || u.contains("localhost") || u.contains("127.0.0.1") || u.contains("ollama")) return "local";
+        boolean primaryLocal = u.isBlank() || u.contains("localhost") || u.contains("127.0.0.1") || u.contains("ollama");
+        boolean hasLocal = localUrl != null && !localUrl.isBlank();
+        if (!primaryLocal && hasLocal) return "hybrid";    // чаты — облако, звонки — локальная модель
+        if (primaryLocal) return "local";
         return "external_api";
     }
 }

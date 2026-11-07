@@ -55,6 +55,10 @@ public class PromptBuilder {
                 the criterion's N/A condition is met; otherwise choose the verdict supported by the visible messages and
                 say explicitly in reason which information is missing.
 
+            13. PRIVACY MASKS: tokens like [КАРТА], [ИИН], [ТЕЛЕФОН], [EMAIL], [IBAN] replace real personal data before
+                sending to you. They are not errors. If the OPERATOR's message contains such a token, the operator did
+                state that data (relevant for identification and for disclosure of confidential information).
+
             OUTPUT
             Return ONLY a JSON object, no markdown, no comments, exactly in this shape, with one item for EVERY checklist criterion:
             {"criteria":[{"criterion_id":"c1","answer":"YES","is_na":false,"reason":"...","evidence_ids":[2],"checked_range":null}]}

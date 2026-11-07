@@ -84,7 +84,7 @@ public class ScoringEngine {
             scored.add(new CriterionResult(c.id(), c.title(), c.type(), c.weight(),
                     r.isNa() ? null : r.answer(), r.isNa(), p == null ? null : bd2(p),
                     r.reason(), r.evidenceIds() == null ? List.of() : r.evidenceIds(), r.checkedRange(),
-                    r.needsReview(), r.verification()));
+                    r.needsReview(), r.verification(), r.confidence()));
             if (c.type() == CriterionType.FLAG) {
                 gross |= !r.isNa() && YES.equals(r.answer());
             } else if (!r.isNa()) {
@@ -111,7 +111,7 @@ public class ScoringEngine {
                         ? r.reason() : "Решение проверяющего: " + reviewerReason;
                 changed.add(new CriterionResult(r.criterionId(), r.title(), r.type(), r.weight(),
                         newIsNa ? null : newAnswer, newIsNa, null, reason, r.evidenceIds(), r.checkedRange(),
-                        false, "Решено проверяющим (человек)"));
+                        false, "Решено проверяющим (человек)", 100));
             } else {
                 changed.add(r);
             }

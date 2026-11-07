@@ -57,9 +57,26 @@ public class AiConfig {
                     new PromptBuilder(), MAPPER);
             log.info("LLM verifier: {}", vModel);
         }
-        return new EvaluationRunner(llm, new PromptBuilder(), new LlmResponseValidator(MAPPER, engine), engine,
+        EvaluationRunner runner = new EvaluationRunner(llm, new PromptBuilder(), new LlmResponseValidator(MAPPER, engine), engine,
                 num(env.apply("LLM_PRICE_IN_PER_1M")), num(env.apply("LLM_PRICE_OUT_PER_1M")),
                 (int) Math.max(1, num(or(env.apply("LLM_MAX_PARALLEL"), "2"))), verifier);
+
+        // CQA Guard: арбитр (3-я модель) решает только спорные критерии; без проверяющего не нужен
+        String aModel = env.apply("LLM_ARBITER_MODEL");
+        if (verifier != null && !blank(aModel)) {
+            runner.withArbiter(new ConsensusArbiter(chain(env, aModel, env.apply("LLM_ARBITER_BASE_URL"),
+                    env.apply("LLM_ARBITER_API_KEY")), new PromptBuilder(), new LlmResponseValidator(MAPPER, engine), MAPPER));
+            log.info("LLM arbiter: {}", aModel);
+        }
+        // Гибрид: звонки (реальные записи) — локальной моделью, данные не уходят в облако
+        String lUrl = env.apply("LLM_LOCAL_BASE_URL"), lModel = env.apply("LLM_LOCAL_MODEL");
+        if (!blank(lUrl) && !blank(lModel)) {
+            String lKey = or(env.apply("LLM_LOCAL_API_KEY"), "local");
+            runner.withLocalForCalls(new OpenAiCompatibleLlmClient(MAPPER, lUrl.trim(), lKey.trim(), lModel.trim()));
+            log.info("Hybrid: voice calls -> local {}", lModel);
+        }
+        runner.withPiiMasking(!"false".equalsIgnoreCase(or(env.apply("PII_MASKING"), "true")));
+        return runner;
     }
 
     /**
