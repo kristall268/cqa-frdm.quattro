@@ -16,6 +16,8 @@ import java.time.Duration;
  * Gemini (https://generativelanguage.googleapis.com/v1beta/openai), OpenAI, Groq, OpenRouter, DeepSeek...
  * Ключ берётся только из переменной окружения / .env на сервере.
  * 429 и 5xx — повтор с паузой (бесплатный тариф Gemini имеет лимит запросов в минуту).
+ * LLM_MODEL может быть списком через запятую: "gemini-3.8-flash,gemini-3.8-flash-lite" —
+ * если модель перегружена (503/429) или недоступна (404), берётся следующая.
  */
 public class OpenAiCompatibleLlmClient implements LlmClient {
 
@@ -25,7 +27,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     private final ObjectMapper mapper;
     private final String endpoint;
     private final String apiKey;
-    private final String model;
+    private final java.util.List<String> models;
     private volatile boolean jsonModeSupported = true;
 
     public OpenAiCompatibleLlmClient(ObjectMapper mapper, String baseUrl, String apiKey, String model) {
@@ -33,51 +35,74 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
         this.endpoint = base.endsWith("/chat/completions") ? base : base + "/chat/completions";
         this.apiKey = apiKey;
-        this.model = model;
+        this.models = java.util.Arrays.stream(model.split(","))
+                .map(String::trim).filter(m -> !m.isEmpty()).toList();
+        if (this.models.isEmpty()) throw new IllegalArgumentException("LLM_MODEL пуст");
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
     }
 
     @Override
-    public String modelName() { return model; }
+    public String modelName() { return models.get(0); }
 
     @Override
     public LlmResponse complete(LlmRequest request) throws LlmException {
         LlmException last = null;
-        for (int attempt = 1; attempt <= MAX_HTTP_ATTEMPTS; attempt++) {
+        for (int i = 0; i < models.size(); i++) {
+            boolean hasFallback = i < models.size() - 1;
+            try {
+                return completeWith(models.get(i), request, hasFallback ? 2 : MAX_HTTP_ATTEMPTS);
+            } catch (FallbackException e) {
+                last = new LlmException(models.get(i) + ": " + e.getMessage());
+            }
+        }
+        throw last;
+    }
+
+    /** Ошибки, при которых имеет смысл попробовать следующую модель. */
+    private static final class FallbackException extends Exception {
+        FallbackException(String m) { super(m); }
+    }
+
+    private LlmResponse completeWith(String model, LlmRequest request, int maxAttempts)
+            throws LlmException, FallbackException {
+        String lastError = "нет ответа";
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             HttpResponse<String> resp;
             try {
                 resp = http.send(HttpRequest.newBuilder(URI.create(endpoint))
                                 .timeout(Duration.ofSeconds(120))
                                 .header("Content-Type", "application/json")
                                 .header("Authorization", "Bearer " + apiKey)
-                                .POST(HttpRequest.BodyPublishers.ofString(body(request)))
+                                .POST(HttpRequest.BodyPublishers.ofString(body(request, model)))
                                 .build(),
                         HttpResponse.BodyHandlers.ofString());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new LlmException("Запрос к модели прерван", e);
             } catch (Exception e) {
-                last = new LlmException("Сеть: " + e.getMessage(), e);
+                lastError = "Сеть: " + e.getMessage();
                 sleep(backoffMs(attempt, null));
                 continue;
             }
             int code = resp.statusCode();
-            if (code == 200) return parse(resp.body());
+            if (code == 200) return parse(resp.body(), model);
             if (code == 400 && jsonModeSupported && resp.body().contains("response_format")) {
                 jsonModeSupported = false;            // провайдер не знает json-режим — шлём без него
+                attempt--;
                 continue;
             }
-            last = new LlmException("HTTP " + code + ": " + shorten(resp.body()));
+            lastError = "HTTP " + code + ": " + shorten(resp.body());
+            if (code == 404) throw new FallbackException(lastError);          // модель недоступна
             if (code == 429 || code >= 500) {
-                sleep(backoffMs(attempt, resp.headers().firstValue("Retry-After").orElse(null)));
+                if (attempt < maxAttempts) sleep(backoffMs(attempt, resp.headers().firstValue("Retry-After").orElse(null)));
                 continue;
             }
-            throw last;                              // 400/401/403/404 — повтор не поможет
+            throw new LlmException(lastError);       // 400/401/403 — повтор не поможет
         }
-        throw last;
+        throw new FallbackException(lastError);
     }
 
-    private String body(LlmRequest request) {
+    private String body(LlmRequest request, String model) {
         ObjectNode root = mapper.createObjectNode();
         root.put("model", model);
         root.put("temperature", 0);
@@ -87,7 +112,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
         return root.toString();
     }
 
-    private LlmResponse parse(String body) throws LlmException {
+    private LlmResponse parse(String body, String model) throws LlmException {
         try {
             JsonNode root = mapper.readTree(body);
             JsonNode content = root.path("choices").path(0).path("message").path("content");
