@@ -85,4 +85,14 @@ public class Appeal {
     public BigDecimal getFinalTotal() { return finalTotal; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getDecidedAt() { return decidedAt; }
+    public void decide(String decision, String newAnswer, Boolean newIsNa, String reason, EvaluationResult fin) {
+        this.status = "DECIDED";
+        this.decision = decision;
+        this.newAnswer = newAnswer;
+        this.newIsNa = newIsNa;
+        this.reviewerReason = reason;
+        this.finalResult = fin;
+        this.finalTotal = fin.totalScore();
+        this.decidedAt = OffsetDateTime.now();
+    }
 }
