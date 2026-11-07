@@ -99,11 +99,17 @@ public class PromptBuilder {
           .append(" | channel: ").append(nz(channel))
           .append(" | language: ").append(nz(language))
           .append(" | messages: ").append(transcript.size()).append('\n');
+        // Длинные звонки: ISO-время -> мм:сс от начала, очень длинные реплики сокращаются.
+        // Индексы реплик НЕ меняются — доказательства остаются верными. Экономит ~20–30% токенов.
+        java.time.OffsetDateTime start = parseIso(transcript.isEmpty() ? null : transcript.get(0).timestamp());
+        int cap = transcript.size() > 60 ? 320 : 2000;
         for (int i = 0; i < transcript.size(); i++) {
             TranscriptMessage m = transcript.get(i);
-            sb.append('[').append(i).append("] (").append(nz(m.timestamp())).append(") ")
+            String text = nz(m.text()).replace('\n', ' ').replaceAll("\\s{2,}", " ").trim();
+            if (text.length() > cap) text = text.substring(0, cap) + "…";
+            sb.append('[').append(i).append("] (").append(shortTime(m.timestamp(), start)).append(") ")
               .append(nz(m.speaker()).toUpperCase()).append(": ")
-              .append(nz(m.text()).replace('\n', ' ')).append('\n');
+              .append(text).append('\n');
         }
         sb.append("\nEvaluate the operator now. Return the JSON object only.");
         return sb.toString();
@@ -116,4 +122,19 @@ public class PromptBuilder {
     }
 
     private static String nz(String s) { return s == null ? "" : s; }
+
+    static java.time.OffsetDateTime parseIso(String ts) {
+        if (ts == null || ts.length() < 19 || ts.charAt(10) != 'T') return null;
+        try { return java.time.OffsetDateTime.parse(ts); } catch (Exception e) {
+            try { return java.time.LocalDateTime.parse(ts).atOffset(java.time.ZoneOffset.UTC); } catch (Exception e2) { return null; }
+        }
+    }
+
+    /** "2026-05-12T10:03:07+05:00" -> "03:04" (от первой реплики); прочие форматы ("00:40") — как есть. */
+    static String shortTime(String ts, java.time.OffsetDateTime start) {
+        java.time.OffsetDateTime t = parseIso(ts);
+        if (t == null || start == null) return nz(ts);
+        long sec = Math.max(0, java.time.Duration.between(start, t).getSeconds());
+        return String.format("%02d:%02d", sec / 60, sec % 60);
+    }
 }

@@ -124,4 +124,17 @@ class GuardTest {
         assertEquals("почта [EMAIL]", PiiMasker.mask("почта a.b@mail.kz"));
         assertEquals("[IBAN]", PiiMasker.mask("KZ86125KZT5004100100"));
     }
+
+    @Test
+    void longCallPromptUsesShortTimesAndKeepsIndices() {
+        List<TranscriptMessage> t = new ArrayList<>();
+        for (int i = 0; i < 70; i++)
+            t.add(new TranscriptMessage("2026-05-12T10:0" + (i / 60) + ":" + String.format("%02d", i % 60) + "+05:00",
+                    i % 2 == 0 ? "client" : "operator", "x".repeat(i == 5 ? 900 : 20)));
+        String p = new PromptBuilder().userMessage("call", "voice call", "RU", t, checklist());
+        assertTrue(p.contains("[0] (00:00) CLIENT"), p.substring(0, 300));
+        assertTrue(p.contains("[61] (01:01) OPERATOR"));
+        assertFalse(p.contains("2026-05-12T"));
+        assertTrue(p.contains("[5] (00:05) OPERATOR: " + "x".repeat(320) + "…"));
+    }
 }

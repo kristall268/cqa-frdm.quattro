@@ -106,6 +106,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
                 continue;
             }
             lastError = "HTTP " + code + ": " + shorten(resp.body());
+            if (code == 413) throw new FallbackException(lastError);          // запрос велик для этой модели — следующая
             if (code == 404) {                                               // модель недоступна
                 deadModels.add(model);
                 throw new FallbackException(lastError);
