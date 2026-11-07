@@ -31,7 +31,10 @@ public class AnswerVerifier {
             - only operator messages are evaluated; bot and system messages are context only (a bot greeting is not the operator's);
             - NO = a required action was skipped or done wrong; N/A = only when na_allowed=true AND its stated condition is met;
             - greeting = in the client's language AND self-introduction in the FIRST operator reply;
-            - identification is required before protected data/actions; general questions -> N/A;
+            - identification is required only before disclosing account-specific data or acting on the account;
+              navigation help ("where to click") and general questions -> N/A;
+            - discovery NO only if needed information was not asked or known info was asked again; a clear request -> N/A;
+              an ignored client question lowers consultation (two questions, one ignored -> 10), not discovery;
             - gross errors are ONLY: insulting the client, offering a paid service bypassing the company
               (personal money transfer for investing, or the client's personal number for a private paid consultation —
               the offer alone is enough), disclosing confidential information (data of OTHER clients, internal company data,

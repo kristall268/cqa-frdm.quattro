@@ -46,6 +46,16 @@ public class PromptBuilder {
             8. Identification: protected data/actions (account balance, operations, withdrawals, personal data changes, etc.)
                require identity verification BEFORE disclosure/action. A general question (tariffs, how-to) does not require it -> N/A.
                If verification was required but not confirmed in the chat -> NO.
+            8a. Identification applies ONLY if the operator disclosed account-specific data (balance, restrictions, operations,
+                personal data, status of the client's requests) or performed/initiated an action on the account.
+                Explaining WHERE to find something in the app/website (self-service navigation) or general information is
+                N/A — even when the topic is the client's own account, report or withdrawal.
+            8b. Discovery (needs) is NO only if the operator needed information to answer correctly and did not ask for it,
+                or asked again for something the client had already stated. If the client's request was already clear and the
+                operator could answer without more data -> N/A. An ignored or unanswered client question is a CONSULTATION
+                (completeness) problem, not a discovery problem.
+            8c. Consultation scale: client asked two things and one significant question was ignored -> 10; only a minor
+                detail missing -> 15. Ignoring a direct client question is also one noticeable flaw for dialog management (7).
             9. Consultation (correct & complete answer) and dialog management (clarity, order, warning about waiting) are separate:
                a clear answer to one of two important questions can get a high dialog-management score and a partial consultation score.
                The 3-minute first-response threshold, tags and attachments are NOT evaluated.
