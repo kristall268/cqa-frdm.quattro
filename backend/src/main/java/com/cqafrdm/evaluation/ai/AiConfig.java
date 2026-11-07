@@ -46,10 +46,25 @@ public class AiConfig {
             LlmClient llmClient, ScoringEngine scoringEngine,
             @Value("${cqa.llm.price-in-per-1m:${LLM_PRICE_IN_PER_1M:0}}") String priceIn,
             @Value("${cqa.llm.price-out-per-1m:${LLM_PRICE_OUT_PER_1M:0}}") String priceOut,
-            @Value("${cqa.llm.max-parallel:${LLM_MAX_PARALLEL:2}}") String maxParallel) {
+            @Value("${cqa.llm.max-parallel:${LLM_MAX_PARALLEL:2}}") String maxParallel,
+            @Value("${cqa.llm.base-url:${LLM_BASE_URL:}}") String baseUrl,
+            @Value("${cqa.llm.api-key:${LLM_API_KEY:}}") String apiKey,
+            @Value("${LLM_VERIFIER_MODEL:}") String verifierModel,
+            @Value("${LLM_VERIFIER_BASE_URL:}") String verifierBaseUrl,
+            @Value("${LLM_VERIFIER_API_KEY:}") String verifierApiKey) {
+        AnswerVerifier verifier = null;
+        String vUrl = blank(verifierBaseUrl) ? baseUrl : verifierBaseUrl;
+        String vKey = blank(verifierApiKey) ? apiKey : verifierApiKey;
+        if (!blank(verifierModel) && !blank(vUrl) && !blank(vKey) && !(llmClient instanceof MockLlmClient)) {
+            verifier = new AnswerVerifier(new OpenAiCompatibleLlmClient(MAPPER, vUrl.trim(), vKey.trim(), verifierModel.trim()),
+                    new PromptBuilder(), MAPPER);
+            log.info("LLM verifier: {}", verifierModel);
+        }
         return new EvaluationRunner(llmClient, new PromptBuilder(), new LlmResponseValidator(MAPPER, scoringEngine),
-                scoringEngine, num(priceIn), num(priceOut), (int) Math.max(1, num(maxParallel)));
+                scoringEngine, num(priceIn), num(priceOut), (int) Math.max(1, num(maxParallel)), verifier);
     }
+
+    private static boolean blank(String s) { return s == null || s.isBlank(); }
 
     /** Пустая строка в .env -> 0, без падения приложения. */
     static double num(String s) {

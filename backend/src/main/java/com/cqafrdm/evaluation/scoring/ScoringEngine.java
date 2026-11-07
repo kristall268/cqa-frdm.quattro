@@ -83,7 +83,8 @@ public class ScoringEngine {
             Double p = points(c, r.answer(), r.isNa());
             scored.add(new CriterionResult(c.id(), c.title(), c.type(), c.weight(),
                     r.isNa() ? null : r.answer(), r.isNa(), p == null ? null : bd2(p),
-                    r.reason(), r.evidenceIds() == null ? List.of() : r.evidenceIds(), r.checkedRange()));
+                    r.reason(), r.evidenceIds() == null ? List.of() : r.evidenceIds(), r.checkedRange(),
+                    r.needsReview(), r.verification()));
             if (c.type() == CriterionType.FLAG) {
                 gross |= !r.isNa() && YES.equals(r.answer());
             } else if (!r.isNa()) {
@@ -109,7 +110,8 @@ public class ScoringEngine {
                 String reason = reviewerReason == null || reviewerReason.isBlank()
                         ? r.reason() : "Решение проверяющего: " + reviewerReason;
                 changed.add(new CriterionResult(r.criterionId(), r.title(), r.type(), r.weight(),
-                        newIsNa ? null : newAnswer, newIsNa, null, reason, r.evidenceIds(), r.checkedRange()));
+                        newIsNa ? null : newAnswer, newIsNa, null, reason, r.evidenceIds(), r.checkedRange(),
+                        false, "Решено проверяющим (человек)"));
             } else {
                 changed.add(r);
             }

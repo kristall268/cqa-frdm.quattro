@@ -101,7 +101,9 @@ JPA: map jsonb with `@JdbcTypeCode(SqlTypes.JSON)`. Import is upsert by `id` (no
   "isNa":false, "points":15.0,  // null when isNa or FLAG
   "reason":"short justification (in conversation language or RU)",
   "evidenceIds":[4,6],      // must exist in transcript
-  "checkedRange":{"from":3,"to":8} }  // required when action missing (answer NO / low score)
+  "checkedRange":{"from":3,"to":8},   // required when action missing (answer NO / low score)
+  "needsReview":false,                // true = 2nd (verifier) model disagrees -> show ⚠, human should look; null = no check
+  "verification":"✓ Подтверждено второй моделью: ..." }
 
 // EvaluationResult
 { "criteria":[CriterionResult], "totalScore":87.5, "grossError":false }

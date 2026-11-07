@@ -33,7 +33,10 @@ class LiveGeminiTest {
                 env.getOrDefault("LLM_MODEL", "gemini-3.8-flash"));
         ScoringEngine engine = new ScoringEngine();
         EvaluationRunner runner = new EvaluationRunner(llm, new PromptBuilder(), new LlmResponseValidator(MAPPER, engine),
-                engine, AiConfig.num(env.get("LLM_PRICE_IN_PER_1M")), AiConfig.num(env.get("LLM_PRICE_OUT_PER_1M")), 1);
+                engine, AiConfig.num(env.get("LLM_PRICE_IN_PER_1M")), AiConfig.num(env.get("LLM_PRICE_OUT_PER_1M")), 1,
+                env.getOrDefault("LLM_VERIFIER_MODEL", "").isBlank() ? null
+                        : new AnswerVerifier(new OpenAiCompatibleLlmClient(MAPPER, env.get("LLM_BASE_URL"), key,
+                                env.get("LLM_VERIFIER_MODEL")), new PromptBuilder(), MAPPER));
 
         run(runner, "RU-sample", "RU", chat());
         run(runner, "KZ-sample", "KZ", List.of(
@@ -56,7 +59,8 @@ class LiveGeminiTest {
         if (o.error() != null) System.out.println("ERROR: " + o.error() + "\nRAW: " + o.rawResponse());
         else o.result().criteria().forEach(c -> System.out.println(c.criterionId() + " " + (c.isNa() ? "N/A" : c.answer())
                 + " pts=" + c.points() + " ev=" + c.evidenceIds() + (c.checkedRange() == null ? "" : " range=" + c.checkedRange())
-                + " | " + c.reason()));
+                + " | " + c.reason()
+                + (c.verification() == null ? "" : "\n      -> " + c.verification())));
         assertEquals(EvaluationOutcome.Status.OK, o.status(), o.error());
     }
 

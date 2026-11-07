@@ -142,4 +142,64 @@ class EvaluationRunnerTest {
         assertTrue(p.contains("[3] (00:40) OPERATOR: Здравствуйте! Меня зовут Айгерим."));
         assertTrue(p.contains("[1] (00:02) BOT:"));
     }
+
+    static String verdicts(String c3) {
+        StringBuilder sb = new StringBuilder("{\"verdicts\":[");
+        for (int i = 1; i <= 8; i++) {
+            if (i > 1) sb.append(',');
+            sb.append(i == 3 && c3 != null ? c3
+                    : "{\"criterion_id\":\"c" + i + "\",\"agree\":true,\"comment\":\"ок\"}");
+        }
+        return sb.append("]}").toString();
+    }
+
+    private EvaluationRunner runnerWithVerifier(LlmClient llm, LlmClient verifierLlm) {
+        return new EvaluationRunner(llm, new PromptBuilder(), new LlmResponseValidator(MAPPER, engine), engine, 0.30, 2.50, 2,
+                new AnswerVerifier(verifierLlm, new PromptBuilder(), MAPPER));
+    }
+
+    @Test
+    void verifierAgreementConfirmsAllAndKeepsScore() {
+        EvaluationOutcome o = runnerWithVerifier(new ScriptedLlm(GOOD), new ScriptedLlm(verdicts(null)))
+                .evaluate("p1", "agent chat", "RU", chat(), checklist());
+        assertEquals(EvaluationOutcome.Status.OK, o.status(), o.error());
+        assertEquals(94.12, o.totalScore().doubleValue());
+        assertTrue(o.result().criteria().stream().allMatch(c -> Boolean.FALSE.equals(c.needsReview())));
+        assertEquals(2, o.llmCalls());
+        assertEquals(6000, o.inputTokens());
+        assertTrue(o.model().contains("проверка"));
+    }
+
+    @Test
+    void verifierDisagreementFlagsOnlyThatCriterion() {
+        String c3 = "{\"criterion_id\":\"c3\",\"agree\":false,\"suggested_answer\":\"NO\",\"suggested_is_na\":false,"
+                + "\"comment\":\"Кодовое слово проверено после раскрытия [5].\"}";
+        EvaluationOutcome o = runnerWithVerifier(new ScriptedLlm(GOOD), new ScriptedLlm(verdicts(c3)))
+                .evaluate("p1", "agent chat", "RU", chat(), checklist());
+        assertEquals(94.12, o.totalScore().doubleValue());                  // баллы не меняются
+        var c = o.result().criteria().get(2);
+        assertEquals(Boolean.TRUE, c.needsReview());
+        assertTrue(c.verification().contains("NO"), c.verification());
+        assertEquals(1L, o.result().criteria().stream().filter(x -> Boolean.TRUE.equals(x.needsReview())).count());
+    }
+
+    @Test
+    void verifierFailureDoesNotBreakEvaluation() {
+        EvaluationOutcome o = runnerWithVerifier(new ScriptedLlm(GOOD), new ScriptedLlm("not json"))
+                .evaluate("p1", "agent chat", "RU", chat(), checklist());
+        assertEquals(EvaluationOutcome.Status.OK, o.status());
+        assertNull(o.result().criteria().get(0).needsReview());
+        assertTrue(o.result().criteria().get(0).verification().contains("недоступна"));
+    }
+
+    @Test
+    void appealDecisionClearsReviewFlag() {
+        String c3 = "{\"criterion_id\":\"c3\",\"agree\":false,\"suggested_answer\":\"NO\",\"comment\":\"x\"}";
+        EvaluationOutcome o = runnerWithVerifier(new ScriptedLlm(GOOD), new ScriptedLlm(verdicts(c3)))
+                .evaluate("p1", "agent chat", "RU", chat(), checklist());
+        var fin = engine.applyOverride(checklist(), o.result(), "c3", "NO", false, "Согласен со второй моделью");
+        assertEquals(Boolean.FALSE, fin.criteria().get(2).needsReview());
+        assertEquals(Boolean.FALSE, fin.criteria().get(0).needsReview());  // остальные сохранены
+        assertEquals(70.59, fin.totalScore().doubleValue());               // 60 / 85
+    }
 }

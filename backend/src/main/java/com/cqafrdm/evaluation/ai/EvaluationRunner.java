@@ -29,9 +29,16 @@ public class EvaluationRunner {
     private final double priceInPer1M;
     private final double priceOutPer1M;
     private final Semaphore parallel;
+    private final AnswerVerifier verifier;   // null — вторая модель-проверяющий выключена
 
     public EvaluationRunner(LlmClient llm, PromptBuilder prompts, LlmResponseValidator validator, ScoringEngine engine,
                             double priceInPer1M, double priceOutPer1M, int maxParallel) {
+        this(llm, prompts, validator, engine, priceInPer1M, priceOutPer1M, maxParallel, null);
+    }
+
+    public EvaluationRunner(LlmClient llm, PromptBuilder prompts, LlmResponseValidator validator, ScoringEngine engine,
+                            double priceInPer1M, double priceOutPer1M, int maxParallel, AnswerVerifier verifier) {
+        this.verifier = verifier;
         this.llm = llm;
         this.prompts = prompts;
         this.validator = validator;
@@ -72,6 +79,14 @@ public class EvaluationRunner {
                 LlmResponseValidator.Result v = validator.validate(r.content(), criteria, transcript);
                 if (v.ok()) {
                     EvaluationResult result = engine.compute(criteria, v.results());
+                    if (verifier != null) {
+                        AnswerVerifier.Result check = verifier.verify(conversationId, channel, language, transcript, criteria, result);
+                        result = AnswerVerifier.apply(result, check);
+                        calls++;
+                        in += check.inputTokens();
+                        out += check.outputTokens();
+                        model = model + " + проверка " + (check.model() == null ? verifier.modelName() : check.model());
+                    }
                     return new EvaluationOutcome(EvaluationOutcome.Status.OK, result, null, model, in, out,
                             cost(in, out), calls, raw);
                 }
