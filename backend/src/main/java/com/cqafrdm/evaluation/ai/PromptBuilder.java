@@ -39,6 +39,9 @@ public class PromptBuilder {
                (e.g. asking the client to transfer money to the operator personally for investing, or asking for the client's
                personal number to give a private paid consultation — the offer itself is enough, client consent is not required);
                disclosing confidential information. Do not invent other kinds of gross errors.
+               "Disclosing confidential information" means revealing data of OTHER clients, internal/company-confidential data,
+               or the client's data to a third party. Telling the client facts about THEIR OWN account before verifying identity
+               is an IDENTIFICATION failure (identification = NO), NOT a gross error — do not penalise the same fact twice.
             7. Greeting (contact) means: the operator greeted in the CLIENT's language AND introduced themself (name) in the FIRST operator reply.
             8. Identification: protected data/actions (account balance, operations, withdrawals, personal data changes, etc.)
                require identity verification BEFORE disclosure/action. A general question (tariffs, how-to) does not require it -> N/A.

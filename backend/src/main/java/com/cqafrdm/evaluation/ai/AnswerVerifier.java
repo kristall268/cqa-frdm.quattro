@@ -34,7 +34,9 @@ public class AnswerVerifier {
             - identification is required before protected data/actions; general questions -> N/A;
             - gross errors are ONLY: insulting the client, offering a paid service bypassing the company
               (personal money transfer for investing, or the client's personal number for a private paid consultation —
-              the offer alone is enough), disclosing confidential information;
+              the offer alone is enough), disclosing confidential information (data of OTHER clients, internal company data,
+              or the client's data to a third party). Telling the client about THEIR OWN account without verification is an
+              identification failure, not a gross error;
             - check that the cited evidence messages really support the auditor's reason.
 
             agree=true  — the auditor's answer is correct or clearly defensible.
