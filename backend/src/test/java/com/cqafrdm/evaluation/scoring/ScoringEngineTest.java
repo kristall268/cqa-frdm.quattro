@@ -2,7 +2,7 @@ package com.cqafrdm.evaluation.scoring;
 
 import com.cqafrdm.checklist.Criterion;
 import com.cqafrdm.checklist.CriterionType;
-import com.cqafrdm.evaluation.model.EvaluationResult;
+import com.cqafrdm.evaluation.EvaluationResult;
 import com.cqafrdm.checklist.ScaleStep;
 import org.junit.jupiter.api.Test;
 
@@ -21,7 +21,7 @@ class ScoringEngineTest {
     @Test
     void allYesAndTopScaleGives100() {
         EvaluationResult r = engine.compute(checklist(), answers("YES", "YES", "YES", "20", "YES", "10", "YES", "NO"));
-        assertEquals(100.0, r.totalScore());
+        assertEquals(100.0, r.totalScore().doubleValue());
         assertFalse(r.grossError());
     }
 
@@ -29,8 +29,8 @@ class ScoringEngineTest {
     void scaleIsProportionalToWeight() {
         // c6 = 7 из 10 при весе 15 -> 10.5 балла (пример из чек-листа)
         EvaluationResult r = engine.compute(checklist(), answers("YES", "YES", "YES", "20", "YES", "7", "YES", "NO"));
-        assertEquals(10.5, r.criteria().get(5).points());
-        assertEquals(95.5, r.totalScore()); // 95.5 / 100 * 100
+        assertEquals(10.5, r.criteria().get(5).points().doubleValue());
+        assertEquals(95.5, r.totalScore().doubleValue()); // 95.5 / 100 * 100
     }
 
     @Test
@@ -39,21 +39,21 @@ class ScoringEngineTest {
         EvaluationResult r = engine.compute(checklist(), answers("YES", null, "YES", "15", "YES", "7", "YES", "NO"));
         assertNull(r.criteria().get(1).points());
         assertTrue(r.criteria().get(1).isNa());
-        assertEquals(88.82, r.totalScore());
+        assertEquals(88.82, r.totalScore().doubleValue());
     }
 
     @Test
     void noGivesZero() {
         EvaluationResult r = engine.compute(checklist(), answers("NO", "YES", "YES", "20", "YES", "10", "NO", "NO"));
-        assertEquals(0.0, r.criteria().get(0).points());
-        assertEquals(85.0, r.totalScore());
+        assertEquals(0.0, r.criteria().get(0).points().doubleValue());
+        assertEquals(85.0, r.totalScore().doubleValue());
     }
 
     @Test
     void grossErrorIsSeparateFlagAndDoesNotZeroScore() {
         EvaluationResult r = engine.compute(checklist(), answers("YES", "YES", "YES", "20", "YES", "10", "YES", "YES"));
         assertTrue(r.grossError());
-        assertEquals(100.0, r.totalScore());
+        assertEquals(100.0, r.totalScore().doubleValue());
         assertNull(r.criteria().get(7).points());
     }
 
@@ -62,9 +62,9 @@ class ScoringEngineTest {
         List<Criterion> cl = List.of(
                 new Criterion("a", "A", "s", "r", CriterionType.BINARY, BigDecimal.valueOf(10), true, "cond", null),
                 new Criterion("f", "F", "s", "r", CriterionType.FLAG, BigDecimal.valueOf(0), false, null, null));
-        var res = new ArrayList<com.cqafrdm.evaluation.model.CriterionResult>();
-        res.add(new com.cqafrdm.evaluation.model.CriterionResult("a", "A", CriterionType.BINARY, 10, null, true, null, "na", List.of(), null));
-        res.add(new com.cqafrdm.evaluation.model.CriterionResult("f", "F", CriterionType.FLAG, 0, "NO", false, null, "ok", List.of(), null));
+        var res = new ArrayList<com.cqafrdm.evaluation.CriterionResult>();
+        res.add(new com.cqafrdm.evaluation.CriterionResult("a", "A", CriterionType.BINARY, BigDecimal.valueOf(10), null, true, null, "na", List.of(), null));
+        res.add(new com.cqafrdm.evaluation.CriterionResult("f", "F", CriterionType.FLAG, BigDecimal.valueOf(0), "NO", false, null, "ok", List.of(), null));
         assertNull(engine.compute(cl, res).totalScore());
     }
 
@@ -75,9 +75,9 @@ class ScoringEngineTest {
                 new Criterion("a", "A", "s", "r", CriterionType.BINARY, BigDecimal.valueOf(3), false, null, null),
                 new Criterion("b", "B", "s", "r", CriterionType.BINARY, BigDecimal.valueOf(6), false, null, null));
         var res = List.of(
-                new com.cqafrdm.evaluation.model.CriterionResult("a", "A", CriterionType.BINARY, 3, "YES", false, null, "x", List.of(0), null),
-                new com.cqafrdm.evaluation.model.CriterionResult("b", "B", CriterionType.BINARY, 6, "NO", false, null, "x", List.of(0), null));
-        assertEquals(33.33, engine.compute(cl, res).totalScore());
+                new com.cqafrdm.evaluation.CriterionResult("a", "A", CriterionType.BINARY, BigDecimal.valueOf(3), "YES", false, null, "x", List.of(0), null),
+                new com.cqafrdm.evaluation.CriterionResult("b", "B", CriterionType.BINARY, BigDecimal.valueOf(6), "NO", false, null, "x", List.of(0), null));
+        assertEquals(33.33, engine.compute(cl, res).totalScore().doubleValue());
         Criterion s = new Criterion("s", "S", "s", "r", CriterionType.SCALE, BigDecimal.valueOf(1), false, null,
                 List.of(new ScaleStep(0, "0"), new ScaleStep(2, "2"), new ScaleStep(3, "3")));
         assertEquals(0.67, ScoringEngine.round2(engine.points(s, "2", false)));
@@ -99,15 +99,15 @@ class ScoringEngineTest {
     @Test
     void appealOverrideRecomputesAndKeepsOriginal() {
         EvaluationResult original = engine.compute(checklist(), answers("NO", "YES", "YES", "10", "YES", "10", "YES", "NO"));
-        assertEquals(80.0, original.totalScore()); // 0 + 15 + 20 + 10 + 15 + 15 + 5
+        assertEquals(80.0, original.totalScore().doubleValue()); // 0 + 15 + 20 + 10 + 15 + 15 + 5
         EvaluationResult fin = engine.applyOverride(checklist(), original, "c4", "20", false, "Ответ был полным");
-        assertEquals(90.0, fin.totalScore());
+        assertEquals(90.0, fin.totalScore().doubleValue());
         assertEquals("10", original.criteria().get(3).answer());     // исходная оценка не изменилась
         assertEquals("20", fin.criteria().get(3).answer());
         assertTrue(fin.criteria().get(3).reason().contains("Ответ был полным"));
 
         EvaluationResult na = engine.applyOverride(checklist(), original, "c2", null, true, "Данных хватало");
-        assertEquals(76.47, na.totalScore()); // 65 / 85
+        assertEquals(76.47, na.totalScore().doubleValue()); // 65 / 85
     }
 
     @Test

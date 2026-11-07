@@ -1,6 +1,6 @@
 package com.cqafrdm.evaluation.ai;
 
-import com.cqafrdm.evaluation.model.EvaluationResult;
+import com.cqafrdm.evaluation.EvaluationResult;
 
 /**
  * Что сохранить в таблицу evaluation.
@@ -14,13 +14,13 @@ public record EvaluationOutcome(
         String model,
         int inputTokens,
         int outputTokens,
-        double costUsd,
+        double costUsd,      // можно сохранить как BigDecimal.valueOf(costUsd)
         int llmCalls,
         String rawResponse) {
 
     public enum Status { OK, FAILED }
 
-    public Double totalScore() { return result == null ? null : result.totalScore(); }
+    public java.math.BigDecimal totalScore() { return result == null ? null : result.totalScore(); }
 
     public Boolean grossError() { return result == null ? null : result.grossError(); }
 }

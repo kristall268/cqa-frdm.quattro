@@ -49,31 +49,92 @@
 | `evaluation/ai/EvaluationRunner` | Бәрін біріктіреді. №1 осыны шақырады |
 | `evaluation/ai/AiConfig` | Spring бин-дері, .env оқу |
 
-## 3. №1 (backend) үшін интеграция
+## 3. №1 (backend) үшін интеграция — дайын код
 
-**pom.xml:** Boot 3.5.x-те Jackson 2 бар, ештеңе қосудың қажеті жоқ. Boot 4 қалса, `com.fasterxml.jackson.core:jackson-databind` тәуелділігін қосыңдар.
+Модуль сенің кластарыңды тікелей қолданады: `checklist.Criterion`, `conversation.TranscriptMessage`, `evaluation.CriterionResult / EvaluationResult / CheckedRange` (BigDecimal). Ешқандай түрлендіру керек емес.
+Бин-дер (`EvaluationRunner`, `ScoringEngine`) `AiConfig` арқылы автоматты түрде жасалады.
 
-**Бағалау (`EvaluationService`):**
+### 3.1 `POST /api/evaluations` — `EvaluationService`
 ```java
-List<TranscriptMessage> t = mapper.convertValue(conv.getTranscript(), new TypeReference<>() {});
-List<Criterion> criteria = version.getCriteria();   // com.cqafrdm.checklist.Criterion — тот же класс, конвертация не нужна
-EvaluationOutcome o = evaluationRunner.evaluate(conv.getId(), conv.getChannel(), conv.getLanguage(), t, criteria);
-// evaluation: status=o.status(), result=o.result(), total_score=o.totalScore(), gross_error=o.grossError(),
-//             model=o.model(), input_tokens=o.inputTokens(), output_tokens=o.outputTokens(),
-//             cost_usd=o.costUsd(), error=o.error()
-```
-`evaluate` бір уақытта ең көбі `LLM_MAX_PARALLEL` (әдепкі 2) сұрау жібереді. Batch үшін оны жай ғана `ExecutorService`-тен шақыра беріңдер.
+// inject: ConversationRepository conversations, ChecklistService checklists, EvaluationRunner runner, ObjectMapper mapper
+// НЕ ставь @Transactional на весь метод: вызов LLM длится 5–30 с, транзакция держать соединение не должна.
+public EvaluationDto evaluate(String conversationId, Long checklistVersionId) {
+    Conversation conv = conversations.findById(conversationId)
+            .orElseThrow(() -> new NotFoundException("Диалог не найден: " + conversationId));
+    ChecklistVersion version = checklists.getEntity(checklistVersionId);
+    List<TranscriptMessage> transcript = mapper.convertValue(conv.getTranscript(),
+            new TypeReference<List<TranscriptMessage>>() {});
 
-**Апелляция шешімі (`PATCH /api/appeals/{id}`):**
+    EvaluationOutcome o = runner.evaluate(conv.getId(), conv.getChannel(), conv.getLanguage(),
+            transcript, version.getCriteria());
+
+    Evaluation saved = evaluations.save(new Evaluation(conv.getId(), version.getId(), o.status().name(),
+            o.result(), o.model(), o.inputTokens(), o.outputTokens(),
+            BigDecimal.valueOf(o.costUsd()), o.error()));
+    return toDto(saved);
+}
+```
+`status=FAILED` болса, `result == null`, ал `error` себебін түсіндіреді. Ол 200 қайтарады, UI оны «AI жауабы жарамсыз» деп көрсетеді.
+
+### 3.2 `POST /api/evaluations/batch`
 ```java
-EvaluationResult base = /* соңғы шешілген апелляцияның final_result-ы, ал ол жоқ болса evaluation.result */;
-EvaluationResult fin = scoringEngine.applyOverride(criteria, base, appeal.criterionId,
-        "CHANGED".equals(decision) ? newAnswer : currentAnswer, "CHANGED".equals(decision) && newIsNa, reason);
-// appeal.final_result = fin; appeal.final_total = fin.totalScore();  evaluation.result өзгермейді
+private final ExecutorService pool = Executors.newFixedThreadPool(3);
+public int evaluateGroup(String groupId, Long checklistVersionId) {
+    List<String> ids = conversations.findByGroupId(groupId).stream().map(Conversation::getId).toList();
+    ids.forEach(id -> pool.submit(() -> {
+        try { evaluate(id, checklistVersionId); } catch (Exception e) { log.warn("batch {}: {}", id, e.getMessage()); }
+    }));
+    return ids.size();   // -> {"started": N}
+}
 ```
-`applyOverride` дұрыс емес жауап келсе, `IllegalArgumentException` лақтырады. Оны 400 қатесіне айналдырыңдар.
+LLM-ге бір мезетте жіберілетін сұрау саны `LLM_MAX_PARALLEL` (әдепкі 2) мәнімен бәрібір шектеледі. Gemini-дің тегін лимиті үшін мұны 2-ден асырмаған дұрыс.
 
-**Чек-лист сақтау (`POST /api/checklists`):** `scoringEngine.validateChecklist(criteria)`. Қате тізімі бос болмаса, 400 қайтарыңдар.
+### 3.3 `PATCH /api/appeals/{id}` — `AppealService.decide`
+`Appeal` entity-іне мына метод керек:
+```java
+public void decide(String decision, String newAnswer, Boolean newIsNa, String reason, EvaluationResult fin) {
+    this.status = "DECIDED"; this.decision = decision; this.newAnswer = newAnswer; this.newIsNa = newIsNa;
+    this.reviewerReason = reason; this.finalResult = fin;
+    this.finalTotal = fin.totalScore(); this.decidedAt = OffsetDateTime.now();
+}
+```
+Сервис:
+```java
+@Transactional
+public AppealDto decide(Long id, AppealDecisionRequest req) {   // {decision, newAnswer, newIsNa, reason}
+    Appeal a = appeals.findById(id).orElseThrow(() -> new NotFoundException("Апелляция не найдена: " + id));
+    if ("DECIDED".equals(a.getStatus())) throw new ValidationException("Апелляция уже рассмотрена");
+    if (req.reason() == null || req.reason().isBlank()) throw new ValidationException("Укажите причину решения");
+    Evaluation e = evaluations.findById(a.getEvaluationId()).orElseThrow();
+    List<Criterion> criteria = checklists.getEntity(e.getChecklistVersionId()).getCriteria();
+
+    // база = последний final по этой оценке, иначе исходный результат
+    EvaluationResult base = appeals.findByEvaluationIdOrderByCreatedAtAscIdAsc(e.getId()).stream()
+            .filter(x -> "DECIDED".equals(x.getStatus()) && x.getFinalResult() != null)
+            .max(Comparator.comparing(Appeal::getDecidedAt)).map(Appeal::getFinalResult)
+            .orElse(e.getResult());
+
+    CriterionResult current = base.criteria().stream()
+            .filter(c -> c.criterionId().equals(a.getCriterionId())).findFirst().orElseThrow();
+    boolean changed = "CHANGED".equals(req.decision());
+    if (!changed && !"CONFIRMED".equals(req.decision())) throw new ValidationException("decision: CONFIRMED | CHANGED");
+    String answer = changed ? req.newAnswer() : current.answer();
+    boolean isNa = changed ? Boolean.TRUE.equals(req.newIsNa()) : current.isNa();
+
+    EvaluationResult fin;
+    try {
+        fin = scoringEngine.applyOverride(criteria, base, a.getCriterionId(), answer, isNa, req.reason());
+    } catch (IllegalArgumentException ex) {          // недопустимый ответ / N/A запрещён
+        throw new ValidationException(ex.getMessage());
+    }
+    a.decide(req.decision(), changed ? answer : null, changed ? isNa : null, req.reason(), fin);
+    return AppealDto.from(a, e.getConversationId());
+}
+```
+`evaluation.result` ешқашан өзгермейді. Бастапқы баға, шешім және финал үшеуі де сақталады.
+
+### 3.4 Чек-лист валидациясы
+Сенің `ChecklistService.validate` әдісің жеткілікті. `scoringEngine.validateChecklist(...)` тек `EvaluationRunner` ішінде қосымша тексеру ретінде шақырылады.
 
 ## 4. `.env` (Gemini)
 ```

@@ -49,7 +49,7 @@ class EvaluationRunnerTest {
         EvaluationOutcome o = runner(new ScriptedLlm("```json\n" + GOOD + "\n```")).evaluate("p1", "agent chat", "RU", chat(), checklist());
         assertEquals(EvaluationOutcome.Status.OK, o.status(), o.error());
         // c2 N/A: веса 85; баллы 10+20+15+15+15+5 = 80 -> 94.12
-        assertEquals(94.12, o.totalScore());
+        assertEquals(94.12, o.totalScore().doubleValue());
         assertEquals("YES", o.result().criteria().get(4).answer()); // "Да" нормализовано
         assertEquals("15", o.result().criteria().get(3).answer());  // число 15 нормализовано
         assertEquals(1, o.llmCalls());
@@ -120,7 +120,7 @@ class EvaluationRunnerTest {
     void mockClientProducesValidEvaluation() {
         EvaluationOutcome o = runner(new MockLlmClient(MAPPER)).evaluate("p1", "agent chat", "RU", chat(), checklist());
         assertEquals(EvaluationOutcome.Status.OK, o.status(), o.error());
-        assertEquals(100.0, o.totalScore());
+        assertEquals(100.0, o.totalScore().doubleValue());
     }
 
     @Test

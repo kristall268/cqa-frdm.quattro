@@ -1,9 +1,9 @@
 package com.cqafrdm.evaluation.scoring;
 
 import com.cqafrdm.checklist.Criterion;
-import com.cqafrdm.evaluation.model.CriterionResult;
+import com.cqafrdm.evaluation.CriterionResult;
 import com.cqafrdm.checklist.CriterionType;
-import com.cqafrdm.evaluation.model.EvaluationResult;
+import com.cqafrdm.evaluation.EvaluationResult;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -81,8 +81,8 @@ public class ScoringEngine {
             CriterionResult r = byId.get(c.id());
             if (r == null) throw new IllegalArgumentException(c.id() + ": нет результата для критерия");
             Double p = points(c, r.answer(), r.isNa());
-            scored.add(new CriterionResult(c.id(), c.title(), c.type(), w(c),
-                    r.isNa() ? null : r.answer(), r.isNa(), p == null ? null : round2(p),
+            scored.add(new CriterionResult(c.id(), c.title(), c.type(), c.weight(),
+                    r.isNa() ? null : r.answer(), r.isNa(), p == null ? null : bd2(p),
                     r.reason(), r.evidenceIds() == null ? List.of() : r.evidenceIds(), r.checkedRange()));
             if (c.type() == CriterionType.FLAG) {
                 gross |= !r.isNa() && YES.equals(r.answer());
@@ -91,7 +91,7 @@ public class ScoringEngine {
                 sumWeights += w(c);
             }
         }
-        Double total = sumWeights > 0 ? round2(100.0 * sumPoints / sumWeights) : null;
+        BigDecimal total = sumWeights > 0 ? bd2(100.0 * sumPoints / sumWeights) : null;
         return new EvaluationResult(scored, total, gross);
     }
 
@@ -108,7 +108,8 @@ public class ScoringEngine {
                 found = true;
                 String reason = reviewerReason == null || reviewerReason.isBlank()
                         ? r.reason() : "Решение проверяющего: " + reviewerReason;
-                changed.add(r.withAnswer(newAnswer, newIsNa, reason));
+                changed.add(new CriterionResult(r.criterionId(), r.title(), r.type(), r.weight(),
+                        newIsNa ? null : newAnswer, newIsNa, null, reason, r.evidenceIds(), r.checkedRange()));
             } else {
                 changed.add(r);
             }
@@ -170,6 +171,11 @@ public class ScoringEngine {
 
     public static boolean hasScaleValue(Criterion c, int v) {
         return c.scale() != null && c.scale().stream().anyMatch(s -> s.value() == v);
+    }
+
+    /** Округление до 2 знаков HALF_UP (как в чек-листе), тип для JSON/БД. */
+    public static BigDecimal bd2(double v) {
+        return BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP);
     }
 
     static double round2(double v) {
