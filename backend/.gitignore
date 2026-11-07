@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# DEV data from organizers (contains real calls) and local eval outputs
+dev.json
+*.dev.json
