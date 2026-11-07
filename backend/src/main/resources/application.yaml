@@ -17,6 +17,7 @@ spring:
     locations: classpath:db/migration
   jackson:
     default-property-inclusion: always
+    time-zone: UTC
   config:
     import:
       - optional:file:.env[.properties]
