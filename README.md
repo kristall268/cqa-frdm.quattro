@@ -1,6 +1,6 @@
 # CQA Freedom · Conversation Quality Analytics
 
-**Команда quattro** · хакатон Freedom Broker · Java 21 · Spring Boot 3.5 · PostgreSQL 16 · HTML/CSS/JS
+**Команда QUATTRO** · хакатон Freedom Broker · Java 21 · Spring Boot 3.5 · PostgreSQL 16 · HTML/CSS/JS
 
 Система автоматической оценки качества работы операторов контакт-центра. Импортирует чаты и звонки (RU · KZ · EN)
 из API организаторов, оценивает каждый диалог по версионируемому чек-листу из 8 критериев, объясняет каждую оценку
