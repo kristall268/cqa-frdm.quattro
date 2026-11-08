@@ -293,3 +293,49 @@
 
 .cqa-progress{font-family:Inter,"Segoe UI",-apple-system,BlinkMacSystemFont,Arial,sans-serif}
 .cqa-progress .cqa-loader{border-color:rgba(29,185,84,.25);border-top-color:#1db954}
+
+/* ---- аналитика на обзоре ---- */
+.cqa-insights{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:18px;margin:20px 0}
+@media (max-width:1100px){.cqa-insights{grid-template-columns:1fr}}
+.cqa-ins{background:#fff;border:1px solid #e3ebe6;border-radius:18px;padding:18px 20px;animation:cqaFade .4s ease both}
+.cqa-ins header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:12px}
+.cqa-ins h3{margin:0;font-size:14px;font-weight:800;color:#13281c}
+.cqa-ins header span{font-size:11px;color:#7a9184}
+.cqa-ins-link{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}.cqa-ins-link:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(16,80,48,.12)}
+.cqa-ins-donut{display:flex;align-items:center;gap:16px}
+.cqa-donut{width:132px;height:132px;flex:none}.cqa-donut circle{transition:stroke-dasharray .6s ease}
+.cqa-donut-track{stroke:#edf2ef}.cqa-donut-num{font-size:30px;font-weight:800;fill:#13281c}.cqa-donut-cap{font-size:10px;fill:#7a9184}
+.cqa-legend{display:grid;gap:8px;flex:1;min-width:0}
+.cqa-leg{display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:8px;font-size:12.5px;color:#304a3c}
+.cqa-leg i{width:10px;height:10px;border-radius:3px}.cqa-leg b{font-weight:800}
+.cqa-hbars{display:grid;gap:13px}
+.cqa-hbar{display:grid;grid-template-columns:74px 1fr 42px;align-items:center;gap:10px;font-size:13px}
+.cqa-hbar span{font-weight:700;color:#304a3c}.cqa-hbar small{margin-left:6px;font-weight:500;color:#8aa093;font-size:11px}
+.cqa-hbar>div{height:10px;background:#edf2ef;border-radius:99px;overflow:hidden}
+.cqa-hbar i{display:block;height:100%;border-radius:99px;animation:cqaGrow .8s ease both;transform-origin:left}
+.cqa-hbar i.ok{background:linear-gradient(90deg,#1db954,#13a36b)}.cqa-hbar i.mid{background:linear-gradient(90deg,#f5b83d,#e0a526)}.cqa-hbar i.low{background:linear-gradient(90deg,#f07167,#d9534f)}
+.cqa-hbar b{text-align:right;color:#13281c}
+.cqa-hist{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;height:150px;align-items:end}
+.cqa-col{display:grid;grid-template-rows:auto 1fr auto;height:100%;text-align:center;gap:6px}
+.cqa-col b{font-size:13px;color:#13281c}.cqa-col span{font-size:11px;color:#7a9184}
+.cqa-col>div{display:flex;align-items:flex-end;background:#f4f8f5;border-radius:10px;overflow:hidden}
+.cqa-col i{display:block;width:100%;border-radius:10px 10px 0 0;animation:cqaRise .8s ease both;transform-origin:bottom}
+.cqa-col i.b0{background:#e5484d}.cqa-col i.b1{background:#f5b83d}.cqa-col i.b2{background:#4cc38a}.cqa-col i.b3{background:#17a864}
+@keyframes cqaGrow{from{transform:scaleX(0)}to{transform:none}}@keyframes cqaRise{from{transform:scaleY(0)}to{transform:none}}
+
+/* ---- кнопки ---- */
+.cqa-btn{border-radius:12px;font-weight:700;letter-spacing:.01em}
+.cqa-btn-primary{background:linear-gradient(135deg,#1fd883,#12b868);color:#04311b;box-shadow:0 6px 18px rgba(21,197,107,.28)}
+.cqa-btn-primary:hover:not(:disabled){box-shadow:0 10px 26px rgba(21,197,107,.38)}
+.cqa-btn:focus-visible,.cqa-theme-toggle:focus-visible{outline:3px solid rgba(29,185,84,.45);outline-offset:2px}
+
+/* ---- модальные окна ---- */
+.cqa-modal{border-radius:22px!important;box-shadow:0 30px 80px rgba(6,30,20,.35)!important;overflow:hidden}
+.cqa-modal input,.cqa-modal select,.cqa-modal textarea{border-radius:12px!important;transition:border-color .15s ease,box-shadow .15s ease}
+.cqa-modal input:focus,.cqa-modal select:focus,.cqa-modal textarea:focus{border-color:#1db954!important;box-shadow:0 0 0 4px rgba(29,185,84,.15)!important;outline:none}
+
+/* ---- переключатель темы ---- */
+.cqa-theme-toggle{position:relative;width:62px;height:32px;border-radius:99px;border:1px solid #dfe7e2;background:#f2f6f3;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-size:14px;color:#6c8578;transition:background .25s ease}
+.cqa-theme-toggle i{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.18);transition:transform .25s ease}
+html[data-theme="dark"] .cqa-theme-toggle{background:#1b2a24;border-color:#2b3d35;color:#c9d8cf}
+html[data-theme="dark"] .cqa-theme-toggle i{transform:translateX(30px);background:#24e58b}
