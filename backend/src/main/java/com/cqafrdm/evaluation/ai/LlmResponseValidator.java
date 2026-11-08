@@ -142,7 +142,8 @@ public class LlmResponseValidator {
 
     static String stripFences(String s) {
         if (s == null) return "";
-        String t = s.trim();
+        // рассуждающие модели (qwen3, deepseek-r1, gpt-oss): блок <think> может содержать фигурные скобки — убираем до поиска JSON
+        String t = s.replaceAll("(?s)<think>.*?</think>", "").replaceAll("(?s)^.*</think>", "").trim();
         if (t.startsWith("```")) {
             int nl = t.indexOf('\n');
             t = nl >= 0 ? t.substring(nl + 1) : t.substring(3);

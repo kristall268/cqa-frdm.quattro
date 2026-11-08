@@ -35,6 +35,14 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
     /** Есть резервный провайдер — не ждём перегруженный сервис, сразу отдаём ошибку. */
     private volatile boolean fastFail = false;
 
+    /** Таймаут одного HTTP-запроса (LLM_TIMEOUT_SECONDS), по умолчанию 120 с. */
+    private volatile int timeoutSeconds = 120;
+
+    public OpenAiCompatibleLlmClient timeoutSeconds(int seconds) {
+        this.timeoutSeconds = Math.max(10, seconds);
+        return this;
+    }
+
     public OpenAiCompatibleLlmClient fastFail() {
         this.fastFail = true;
         return this;
@@ -84,7 +92,7 @@ public class OpenAiCompatibleLlmClient implements LlmClient {
             HttpResponse<String> resp;
             try {
                 resp = http.send(HttpRequest.newBuilder(URI.create(endpoint))
-                                .timeout(Duration.ofSeconds(120))
+                                .timeout(Duration.ofSeconds(timeoutSeconds))
                                 .header("Content-Type", "application/json")
                                 .header("Authorization", "Bearer " + apiKey)
                                 .POST(HttpRequest.BodyPublishers.ofString(body(request, model)))

@@ -37,8 +37,12 @@ services:
       DB_URL: jdbc:postgresql://db:5432/cqa
       DB_USER: ${DB_USER:-cqa}
       DB_PASSWORD: ${DB_PASSWORD:-cqa}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75}
     ports:
       - "8080:8080"
+    # Ollama на компьютере: в .env LLM_BASE_URL=http://host.docker.internal:11434 (на Linux нужна эта строка)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
 volumes:

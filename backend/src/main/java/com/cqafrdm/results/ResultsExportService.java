@@ -108,7 +108,8 @@ public class ResultsExportService {
     String mode() {
         if (modelMode != null && !modelMode.isBlank()) return modelMode.trim();
         String u = llmBaseUrl == null ? "" : llmBaseUrl.toLowerCase(Locale.ROOT);
-        boolean primaryLocal = u.isBlank() || u.contains("localhost") || u.contains("127.0.0.1") || u.contains("ollama");
+        boolean primaryLocal = u.isBlank() || u.contains("localhost") || u.contains("127.0.0.1") || u.contains("ollama")
+                || u.contains(":11434") || u.contains("host.docker.internal");
         boolean hasLocal = localUrl != null && !localUrl.isBlank();
         if (!primaryLocal && hasLocal) return "hybrid";    // чаты — облако, звонки — локальная модель
         if (primaryLocal) return "local";

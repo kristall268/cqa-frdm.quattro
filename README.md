@@ -77,6 +77,29 @@ frontend/ (HTML/CSS/JS, :5500) ──REST──▶ backend/ (Spring Boot, :8080)
 (`LLM_*`, `LLM_FALLBACK_*`, `LLM_VERIFIER_*`). Для конфиденциальных данных — локальная модель через Ollama
 (`LLM_LOCAL_*`): звонки оцениваются локально, чаты — в облаке. Подробно: [docs/AI.md](docs/AI.md).
 
+## Локальная модель (Ollama)
+
+```bash
+ollama pull qwen2.5:14b          # или qwen2.5:7b на слабом ПК
+ollama serve                     # обычно уже запущена как служба
+```
+
+`.env`: `LLM_BASE_URL=http://localhost:11434`, `LLM_MODEL=qwen2.5:14b`, ключ не нужен. Backend в Docker — `LLM_BASE_URL=http://host.docker.internal:11434`.
+
+Порт 11434 (или `LLM_PROVIDER=ollama`) включает нативный API Ollama `/api/chat`, а не OpenAI-совместимый `/v1`:
+
+- **Окно контекста.** По умолчанию оно у Ollama меньше нашего промпта, и Ollama молча обрезает начало, то есть инструкции. Backend передаёт `num_ctx` в каждом запросе (подбирает его под промпт в пределах `OLLAMA_NUM_CTX`…`OLLAMA_NUM_CTX_MAX`). При переполнении оценка становится FAILED с понятной причиной, а не тихо портится. Настраивать сервер Ollama не нужно.
+- **Детерминизм:** JSON-режим, `temperature=0`, `seed`.
+- **Рассуждающие модели.** Блок `<think>` вырезается до разбора JSON.
+- **Таймаут** `OLLAMA_TIMEOUT_SECONDS=600`. Параллельность по умолчанию 1: Ollama обрабатывает запросы по очереди.
+- **Понятные ошибки:** «модель не скачана → `ollama pull …`», «Ollama недоступна → `ollama serve`».
+
+Модель-проверяющий и арбитр на той же локальной модели утраивают время. Локально их лучше выключить (`LLM_VERIFIER_MODEL=`, `LLM_ARBITER_MODEL=`) или держать в облаке.
+
+Гибрид «звонки локально, чаты в облаке»: облачная основная модель + `LLM_LOCAL_BASE_URL=http://localhost:11434`, `LLM_LOCAL_MODEL=qwen2.5:7b`.
+
+Проверка на живой Ollama: `mvnw test "-Dtest=LiveOllamaTest" "-Dlive=true"` (при настроенных `LLM_*` в `.env`).
+
 ## Запуск
 
 Нужны: Java 21, Python 3, Docker (или PostgreSQL 16).
@@ -103,7 +126,7 @@ python scripts/results.py validate results/prod/results.json --expect 10
 cd backend && ./mvnw test
 ```
 
-44 unit-теста: шкалы и веса, N/A и перераспределение, округление, грубая ошибка, апелляция с сохранением исходной
+56 unit-тестов: шкалы и веса, N/A и перераспределение, округление, грубая ошибка, апелляция с сохранением исходной
 оценки, повтор и FAILED, запрет бота как доказательства, проверяющая модель и арбитр, маскирование ПДн,
 «Что если?», формат results.json.
 
